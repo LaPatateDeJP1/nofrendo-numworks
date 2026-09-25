@@ -1,134 +1,140 @@
-# Nofrendo - Émulateur NES pour NumWorks N0120
+# Nofrendo - NES Emulator for NumWorks N0120
 
-Portage optimisé et enrichi de l'émulateur Nintendo Entertainment System (**Nofrendo 1.2.3**) pour calculatrice graphique **NumWorks N0120** (architecture STM32H725VET6, Cortex-M7 à 550 MHz, écran LCD 320×240, Flash externe OctoSPI).
+> A high-performance, feature-packed Nintendo Entertainment System (NES) emulator for the NumWorks N0120 graphing calculator running Epsilon 20+.
 
-Cette version apporte un **sélecteur interactif multi-ROMs**, un **menu Pause OSD en jeu**, l'accélération **Fast-Forward 2x**, la mise à l'échelle **plein écran (320×240)**, des **palettes de couleurs rétro** commutables à la volée, et une gestion mémoire **XIP** (stockage direct en Flash externe sans consommation de RAM).
+[![NumWorks](https://img.shields.io/badge/Platform-NumWorks%20N0120-yellow.svg)](https://www.numworks.com)
+[![Target](https://img.shields.io/badge/SoC-STM32H725%20Cortex--M7%20@%20550MHz-blue.svg)](https://www.st.com)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
 
----
+This project is an optimized bare-metal port of **Nofrendo 1.2.3** specifically tailored for the **NumWorks N0120** graphing calculator (STM32H725VET6 Cortex-M7 @ 550 MHz, 320×240 16-bit color LCD, OctoSPI Flash XIP).
 
-## 🌟 Fonctionnalités
-
-- **Catalogue Multi-ROMs Interactif** :
-  - Interface plein écran 320×240 avec pagination, défilement fluide et boucle circulaire.
-  - Troncature dynamique propre des titres pour éviter tout débordement.
-  - Inspection automatique des métadonnées cartouche (numéro et nom du **Mapper iNES**, tailles **PRG** / **CHR**, poids en Ko).
-  - Boucle d'exécution continue : quitter un jeu ramène directement au menu de sélection.
-
-- **Mémoire Flash XIP (Zero RAM Waste)** :
-  - Les ROMs sont compilées directement dans la section `.rodata` de la Flash externe OctoSPI avec alignement 32 bits.
-  - Empreinte RAM interne (.data + .bss) fixée à seulement **~16.8 Ko** sur 1 Mo, quel que soit le nombre de jeux embarqués.
-
-- **Menu Pause OSD en jeu** :
-  - Déclenché à tout moment avec **`Toolbox`**, **`Var`** ou le raccourci **`Shift` + `Retour`**.
-  - Pop-up centré avec reprise instantanée, modification de vitesse, de format et de palette, réinitialisation à chaud (**Reset**) et retour au catalogue.
-
-- **Moteur d'Affichage & Mise à l'Échelle** :
-  - **Mode 4:3 Original (256×240)** : Centré à l'écran avec bordures latérales rétro stylisées aux couleurs de la NES.
-  - **Mode Plein Écran (320×240)** : Étirement horizontal 5:4 fluide tirant parti des 550 MHz du Cortex-M7 sans baisse de framerate.
-
-- **5 Palettes de Couleurs Rétro** :
-  - **Originale NES** : Rendu historique Nofrendo.
-  - **Smooth Composite (FirebrandX)** : Couleurs douces et naturelles façon tube cathodique.
-  - **Arcade Vivid (Sony CXA)** : Rendu éclatant et contrasté.
-  - **Game Boy Rétro (DMG-01)** : Monochrome vert olive iconique à 4 nuances.
-  - **Noir & Blanc** : Écran de télévision cathodique rétro.
-
-- **Avance Rapide (Fast-Forward 2x)** :
-  - Doublement dynamique de la cadence d'émulation (120 FPS) pour accélérer cinématiques et dialogues.
-
-- **Compatibilité Epsilon 24+** :
-  - Code bare-metal blindé respectant l'isolation de la MPU (*Memory Protection Unit*) d'Epsilon sans aucun HardFault.
+It introduces an **interactive Multi-ROM launcher**, an **in-game OSD Pause menu**, **2x Fast-Forward**, **fullscreen 5:4 display scaling**, **5 on-the-fly retro color palettes**, and **zero-RAM XIP storage** (direct execution from external flash memory without consuming calculator RAM).
 
 ---
 
-## 🎮 Commandes & Contrôles
+## 🌟 Key Features
 
-### En jeu (Émulateur NES)
-| Touche NumWorks | Bouton NES | Rôle |
+- **Interactive Multi-ROM Launcher**:
+  - Fullscreen 320×240 catalog with pagination, smooth cursor navigation, and circular scrolling.
+  - Automatic ROM metadata extraction (iNES Mapper number, mapper name, PRG/CHR ROM sizes, file size in KB).
+  - Clean title truncation and responsive layout.
+  - Continuous game loop: exiting a game returns directly to the catalog menu.
+
+- **Zero-RAM Waste (Flash XIP)**:
+  - All embedded ROMs are stored directly in the `.rodata` section of external OctoSPI flash memory with 32-bit alignment.
+  - Internal SRAM footprint (`.data` + `.bss`) is capped at only **~16.8 KB** (out of 1 MB available), regardless of the number or size of games included!
+
+- **In-Game OSD Pause Menu**:
+  - Triggered at any time by pressing **`Toolbox`**, **`Var`**, or **`Shift` + `Back`**.
+  - On-screen popup overlay allowing you to resume, toggle Fast-Forward, toggle Aspect Ratio, cycle color palettes, perform a soft reset, or exit to the ROM catalog.
+
+- **Display Engine & Video Scaling**:
+  - **4:3 Original Mode (256×240)**: Centered with stylized NES-themed retro side borders.
+  - **Fullscreen Mode (320×240)**: Smooth 5:4 horizontal interpolation taking full advantage of the 550 MHz Cortex-M7 without frame drops.
+
+- **5 Retro Color Palettes**:
+  - **NES Original**: Classic vintage Nofrendo palette.
+  - **Smooth Composite (FirebrandX)**: Balanced, authentic CRT composite colors.
+  - **Arcade Vivid (Sony CXA)**: High-contrast, vibrant arcade rendering.
+  - **Game Boy DMG-01**: Iconic 4-shade olive green monochrome.
+  - **Black & White**: Vintage CRT television monochrome.
+
+- **2x Fast-Forward Acceleration**:
+  - Double the emulation rate (120 FPS target) on demand to speed through cutscenes, dialogs, and intros.
+
+- **Epsilon 24+ Compatibility**:
+  - Hardened against Cortex-M7 Memory Protection Unit (MPU) faults. Fully compatible with modern NumWorks Epsilon firmware versions (20.x through 24.x+).
+
+---
+
+## 🎮 Controls & Keybindings
+
+### In-Game (NES Emulator)
+| NumWorks Key | NES Controller | Description |
 | :--- | :---: | :--- |
-| **Flèches directionnelles** | **D-Pad** | Déplacements (Haut, Bas, Gauche, Droite) |
-| **Back** (`<--`) | **Bouton A** | Action principale / Saut |
-| **OK** | **Bouton B** | Action secondaire / Attaque / Course |
-| **EXE** | **Bouton A** | Action principale (pavé numérique alternatif) |
-| **Ans** | **Bouton B** | Action secondaire (pavé numérique alternatif) |
-| **Shift** | **Select** | Sélection / Menu interne du jeu |
-| **Backspace** (`[X]`) | **Start** | Démarrer la partie / Pause interne NES |
-| **Toolbox** / **Var** | **Menu OSD** | Ouvre le menu Pause Nofrendo |
-| **Shift** + **Back** | **Menu OSD** | Raccourci alternatif pour ouvrir la Pause |
-| **tan** | **Hard Reset** | Réinitialisation matérielle du jeu |
+| **Arrow Keys** | **D-Pad** | Directional controls (Up, Down, Left, Right) |
+| **Back** (`<--`) | **Button A** | Primary action / Jump |
+| **OK** | **Button B** | Secondary action / Attack / Run |
+| **EXE** | **Button A** | Primary action (alternative numpad mapping) |
+| **Ans** | **Button B** | Secondary action (alternative numpad mapping) |
+| **Shift** | **Select** | Game menu / Mode selection |
+| **Backspace** (`[X]`) | **Start** | Start game / Internal NES pause |
+| **Toolbox** / **Var** | **OSD Menu** | Open in-game Nofrendo Pause Menu |
+| **Shift** + **Back** | **OSD Menu** | Alternative shortcut to open OSD Pause Menu |
+| **tan** | **Hard Reset** | Instant hardware reset of the active game |
 
-### Dans le Sélecteur Multi-ROMs
-| Touche NumWorks | Action |
+### In the Multi-ROM Launcher
+| NumWorks Key | Action |
 | :--- | :--- |
-| **Haut** / **Bas** | Déplacer le curseur ligne par ligne |
-| **Gauche** / **Droite** | Saut de page précédente / suivante |
-| **OK** ou **EXE** | Lancer le jeu sélectionné |
-| **Home** | Quitter vers le système Epsilon de la calculatrice |
+| **Up** / **Down** | Move selection cursor row by row |
+| **Left** / **Right** | Previous page / Next page |
+| **OK** or **EXE** | Launch selected game |
+| **Home** | Exit to NumWorks OS (Epsilon) |
 
 ---
 
 ## 📥 Installation
 
-### Option 1 : Via l'Atelier NumWorks (Recommandé)
-1. Ouvrez Google Chrome ou Edge et rendez-vous sur **[my.numworks.com/apps](https://my.numworks.com/apps)**.
-2. Connectez votre calculatrice NumWorks avec son câble USB.
-3. Glissez-déposez le fichier binaire **`output/nofrendo.nwa`** sur la page.
-4. Cliquez sur **Installer sur la calculatrice**.
+### Method 1: NumWorks Web Uploader (Recommended)
+1. Open Google Chrome or Microsoft Edge and navigate to **[my.numworks.com/apps](https://my.numworks.com/apps)**.
+2. Connect your NumWorks calculator using its USB cable.
+3. Drag and drop the binary file **`output/nofrendo.nwa`** onto the web page.
+4. Click **Install on calculator**.
 
-### Option 2 : En ligne de commande (nwlink)
-Dans un terminal avec Node.js installé :
-```powershell
+### Method 2: Command Line (nwlink)
+With Node.js installed on your computer:
+```bash
 npx --yes -- nwlink@0.0.19 install-nwa output/nofrendo.nwa
 ```
 
 ---
 
-## 🛠️ Compilation
+## 🛠️ Building from Source
 
-### Prérequis
-- **Toolchain ARM Embedded** : `arm-none-eabi-gcc` accessible dans votre variable `PATH`.
-- **Node.js** : pour l'outil de packaging `nwlink`.
-- **Python 3.8+** : pour l'automatisation du catalogue et du build.
+### Prerequisites
+- **ARM Embedded Toolchain**: `arm-none-eabi-gcc` installed and in your system `PATH`.
+- **Node.js**: Required for the `nwlink` packaging utility.
+- **Python 3.8+**: Used for build automation and ROM embedding.
 
-### Compiler l'application
-Exécutez simplement le script de compilation unifié :
+### Compile
+Run the unified build script:
 ```bash
 python build.py
 ```
-Le script compile tous les modules C, génère l'icône, lie le binaire `.nwa` et produit l'exécutable pour la NumWorks dans `output/nofrendo.nwa`.
+This script handles C module compilation, application icon generation, elf linking, and packaging into `output/nofrendo.nwa` and `output/nofrendo.bin`.
 
 ---
 
-## 🕹️ Personnaliser le Catalogue de Jeux
+## 🕹️ Adding Your Own NES ROMs
 
-Pour ajouter vos propres jeux NES :
+To customize the embedded games library:
 
-1. Déposez vos fichiers de ROMs au format standard `.nes` dans le dossier **`roms/`**.
-2. Régénérez le catalogue C :
+1. Place your `.nes` ROM files into the **`roms/`** directory.
+2. Regenerate the embedded C source catalog:
    ```bash
    python tools/embed_roms.py -i roms -c src/rom_catalog.c
    ```
-3. Recompilez le projet :
+3. Rebuild the application:
    ```bash
    python build.py
    ```
-4. Flashez le nouveau binaire généré dans `output/nofrendo.nwa` sur votre calculatrice.
+4. Flash the newly generated `output/nofrendo.nwa` onto your calculator.
 
 ---
 
-## 📐 Architecture Technique
+## 📐 Technical Specifications
 
-- **Cible matérielle** : NumWorks modèle N0120 (SoC STM32H725VET6, Cortex-M7 @ 550 MHz).
-- **Affichage** : Dalle LCD 320×240 en RGB565 via l'API bare-metal EADK.
-- **Stockage ROM** : Flash externe OctoSPI XIP (section `.rodata`, alignement 4 octets).
-- **Consommation mémoire** :
-  - **RAM (.data + .bss)** : ~16.8 Ko (sur 1024 Ko disponibles).
-  - **Flash (.text + .rodata)** : ~1.26 Mo avec 7 jeux intégrés.
-- **Mappers supportés** : NROM (0), MMC1 (1), UNROM (2), CNROM (3), MMC3 (4), MMC5 (5), AOROM (7), GxROM (66), et plus de 30 autres mappers intégrés dans Nofrendo.
+- **Target Device**: NumWorks N0120 (STM32H725VET6 MCU, ARM Cortex-M7 @ 550 MHz).
+- **Video Output**: 320×240 RGB565 via NumWorks bare-metal EADK API.
+- **ROM Storage**: External OctoSPI Flash (XIP in `.rodata`, 4-byte aligned).
+- **RAM Usage**:
+  - **SRAM (.data + .bss)**: ~16.8 KB (out of 1024 KB available).
+  - **Flash (.text + .rodata)**: ~1.26 MB (with 7 included games).
+- **Supported Mappers**: NROM (0), MMC1 (1), UNROM (2), CNROM (3), MMC3 (4), MMC5 (5), AOROM (7), GxROM (66), and over 30 additional mappers implemented in Nofrendo.
 
 ---
 
-## 📜 Licence
+## 📜 License
 
-- **Nofrendo** : GNU General Public License v2 (GPL-2.0).
-- **Portage NumWorks** : Logiciel libre sous licence MIT / GPL-2.0.
+- **Nofrendo Core**: GNU General Public License v2 (GPL-2.0).
+- **NumWorks Port & Enhancements**: Open-source under MIT / GPL-2.0.
