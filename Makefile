@@ -99,18 +99,26 @@ CFLAGS += -DAUDIO=1 -Isrc/nofrendo/sndhrdw
 endif
 
 objs += $(addprefix output/, \
-  icon.o \
   timing.o \
   display.o \
   sound.o \
   keyboard.o \
   lz4.o \
   main.o \
+  menu.o \
+  pause_menu.o \
+  rom_catalog.o \
   osd.o \
   statefile_wrapper.o \
   storage.o \
   stubs.o \
+  icon.o \
 )
+
+.PHONY: roms
+roms:
+	@echo "EMBED ROMS"
+	$Q python tools/embed_roms.py -i roms -c src/rom_catalog.c
 
 .PHONY: build
 build: output/nofrendo.nwa
@@ -120,7 +128,7 @@ check: output/nofrendo.bin
 
 output/nofrendo.bin: output/nofrendo.nwa
 	@echo "NWLINK  $@"
-	$Q $(NWLINK) nwa-bin -d src/2048.nes $< $@
+	$Q $(NWLINK) nwa-bin $< $@
 
 output/nofrendo.nwa: $(objs)
 	@echo "LD      $@"

@@ -1,13 +1,3 @@
-/* vim: set tabstop=3 expandtab:
-**
-** This file is in the public domain.
-**
-** osd.c
-**
-** $Id: osd.c,v 1.2 2001/04/27 14:37:11 neil Exp $
-**
-*/
-
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -25,6 +15,7 @@
 #include <log.h>
 #include <osd.h>
 #include <nofrendo.h>
+#include "game_entry.h"
 
 #include <version.h>
 
@@ -39,12 +30,6 @@ int osd_init() {
 void osd_shutdown() {
 }
 
-// CRC algorithm taken from https://barrgroup.com/blog/crc-series-part-3-crc-implementation-code-cc
-// We took the slow implementation to save memory, as we only need to compute it once
-/*
- * The width of the CRC calculation and result.
- * Modify the typedef for a 16 or 32-bit CRC standard.
- */
 typedef uint32_t crc;
 
 #define WIDTH  (8 * sizeof(crc))
@@ -53,22 +38,9 @@ typedef uint32_t crc;
 
 crc crcSlow(uint8_t const message[], int nBytes) {
     crc  remainder = 0;
-    /*
-     * Perform modulo-2 division, a byte at a time.
-     */
     for (int byte = 0; byte < nBytes; ++byte) {
-        /*
-         * Bring the next byte into the remainder.
-         */
         remainder ^= (message[byte] << (WIDTH - 8));
-
-        /*
-         * Perform modulo-2 division, a bit at a time.
-         */
         for (uint8_t bit = 8; bit > 0; --bit) {
-            /*
-             * Try to divide the current data bit.
-             */
             if (remainder & TOPBIT) {
                 remainder = (remainder << 1) ^ POLYNOMIAL;
             } else {
@@ -76,20 +48,21 @@ crc crcSlow(uint8_t const message[], int nBytes) {
             }
         }
     }
-
-    /*
-     * The final remainder is the CRC result.
-     */
     return (remainder);
-}   /* crcSlow() */
+}
 
-
-/* This is os-specific part of main() */
 int osd_main(int argc, char *argv[]) {
   config.filename = configfilename;
-  uint32_t crc = crcSlow(eadk_external_data, eadk_external_data_size);
+  const GameEntry *current_game = game_get_current();
+  const uint8_t *rom_ptr = (current_game && current_game->rom_data) 
+                            ? current_game->rom_data 
+                            : (const uint8_t *)"";
+  size_t rom_len = (current_game && current_game->rom_data) 
+                   ? current_game->rom_size 
+                   : 0;
+  uint32_t crc = current_game ? current_game->crc32 : 0;
   char crcHex[9];
-  sprintf(crcHex, "%08x",  crc);
+  sprintf(crcHex, "%08x", (unsigned int)crc);
 
   return main_loop(crcHex, system_autodetect);
 }
@@ -97,13 +70,11 @@ int osd_main(int argc, char *argv[]) {
 void osd_getmouse(int *x, int *y, int *button) {
 }
 
-/* File system interface */
 void osd_fullname(char *fullname, const char *shortname)
 {
    strncpy(fullname, shortname, PATH_MAX);
 }
 
-/* This gives filenames for storage of saves */
 char *osd_newextension(char *string, char *ext)
 {
     int l=strlen(string);
@@ -115,7 +86,6 @@ char *osd_newextension(char *string, char *ext)
     return string;
 }
 
-/* This gives filenames for storage of PCX snapshots */
 int osd_makesnapname(char *filename, int len)
 {
    return -1;
