@@ -3,36 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nofrendo NumWorks - Interface WebUSB & Créateur de Pack</title>
+  <title>NOFRENDO // NUMWORKS N0120 WEB FLASHER</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2215%22 fill=%22%23FFC300%22/><text y=%2265%22 x=%2250%22 font-size=%2245%22 font-family=%22system-ui,sans-serif%22 font-weight=%22bold%22 text-anchor=%22middle%22 fill=%22%23111827%22>NES</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 rx=%222%22 fill=%22%23FFC300%22/><rect x=%223%22 y=%223%22 width=%2210%22 height=%2210%22 fill=%22%23111827%22/></svg>">
 </head>
 <body>
 
-  <!-- En-tête minimaliste industriel -->
+  <!-- En-tête compact -->
   <header class="header-container">
     <div class="header-inner">
       <div class="brand">
-        <span class="brand-title">Nofrendo</span>
-        <span class="badge-tag">NumWorks N0120</span>
+        <span class="brand-title">NOFRENDO</span>
+        <span class="badge-tag">N0120</span>
         <span class="badge-tag">STM32H725</span>
+        <span class="badge-tag">OCTOSPI</span>
       </div>
       <div class="usb-indicator">
         <span id="usb-dot" class="dot-status"></span>
-        <span id="usb-text">Déconnecté</span>
+        <span id="usb-text">DECONNECTE</span>
       </div>
     </div>
     
-    <!-- Barre d'onglets de navigation -->
+    <!-- Barre d'onglets textuelle -->
     <nav class="nav-tabs">
       <button class="nav-tab-btn active" data-tab="tab-express">
-        <span class="tab-num">01</span> Flash Express
+        [01] FLASH EXPRESS
       </button>
       <button class="nav-tab-btn" data-tab="tab-creator">
-        <span class="tab-num">02</span> Créateur de Pack
+        [02] CREATEUR DE PACK
       </button>
       <button class="nav-tab-btn" data-tab="tab-controls">
-        <span class="tab-num">03</span> Commandes & Sécurité
+        [03] COMMANDES & SECURITE
       </button>
     </nav>
   </header>
@@ -40,36 +41,47 @@
   <!-- Contenu Principal -->
   <main class="main-wrapper">
 
-    <!-- Bannière de compatibilité WebUSB -->
+    <!-- Alerte compatibilité WebUSB -->
     <div id="compat-banner" class="alert-box alert-warning" style="display: none;"></div>
 
     <!-- ====================================================================
-         VUE 1 : FLASH EXPRESS
+         ONGLET 1 : FLASH EXPRESS
          ==================================================================== -->
     <section id="tab-express" class="tab-content active">
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Installation Immédiate</h2>
-            <p class="card-subtitle">Flashez l'émulateur Nofrendo prêt à l'emploi avec un pack de homebrew libre sans configuration.</p>
+            <h2 class="card-title">INSTALLATION EXPRESS (HOMEBREW LIBRE)</h2>
+            <p class="card-subtitle">Flash direct du binaire précompilé intégrant 2048.nes.</p>
           </div>
-          <span class="badge-tag">Prêt à flasher</span>
+          <span class="badge-tag">PRECOMPILÉ</span>
         </div>
 
-        <div class="alert-box alert-info">
-          <div>
-            <strong>Pack par défaut inclus :</strong> Jeu libre <em>2048.nes</em> (Mapper 0 NROM, ~16 Ko).<br>
-            Branchez votre NumWorks allumée avec son câble USB-C puis cliquez sur le bouton ci-dessous.
+        <div class="spec-grid">
+          <div class="spec-item">
+            <span class="spec-label">Cible Matérielle</span>
+            <span class="spec-val">NumWorks N0120 (STM32H725)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Adresse Flash</span>
+            <span class="spec-val">0x90570000 (OctoSPI XIP)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">RAM Allouée</span>
+            <span class="spec-val">0x24012804 (AXI SRAM)</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">Payload</span>
+            <span class="spec-val">nofrendo_express.bin (~98 Ko)</span>
           </div>
         </div>
 
-        <div style="margin-top: 20px;">
+        <div style="margin-top: 14px;">
           <button id="btn-flash-express" class="btn btn-primary requires-webusb">
-            Installer le pack sur la NumWorks
+            INSTALLER SUR LA NUMWORKS
           </button>
         </div>
 
-        <!-- Console compacte d'état -->
         <div class="console-box" id="express-console">
           <div class="console-line info">En attente de connexion USB...</div>
         </div>
@@ -80,53 +92,51 @@
     </section>
 
     <!-- ====================================================================
-         VUE 2 : CRÉATEUR DE PACK (Constructeur dynamique client-side)
+         ONGLET 2 : CRÉATEUR DE PACK (Constructeur dynamique client-side)
          ==================================================================== -->
     <section id="tab-creator" class="tab-content">
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Créateur de Pack Multi-ROMs</h2>
-            <p class="card-subtitle">Composez votre sélection personnalisée de jeux NES directement dans le navigateur sans recompilation.</p>
+            <h2 class="card-title">CONSTRUCTEUR DE PACK MULTI-ROMS</h2>
+            <p class="card-subtitle">Injection binaire côté client dans le template EADK sans recompilation.</p>
           </div>
-          <span class="badge-tag"><span id="rom-count">0</span> jeu(x)</span>
+          <span class="badge-tag"><span id="rom-count">0</span> JEU(X)</span>
         </div>
 
         <!-- Zone Glisser-Déposer -->
         <input type="file" id="file-input" accept=".nes" multiple style="display: none;">
         <div id="dropzone" class="dropzone">
-          <div class="dropzone-icon">📥</div>
-          <div class="dropzone-text">Glissez vos fichiers .nes ici ou cliquez pour parcourir</div>
-          <div class="dropzone-hint">Format iNES standard vérifié (NES\x1A) • Mappers 0, 1, 2, 3, 4, 7... supportés</div>
+          <div class="dropzone-text">GLISSER LES FICHIERS .NES ICI OU CLIQUER POUR PARCOURIR</div>
+          <div class="dropzone-hint">Format iNES standard (en-tête 0x4E 0x45 0x53 0x1A) • Mappers 0, 1, 2, 3, 4, 7...</div>
         </div>
 
-        <!-- Jauge d'espace Flash OctoSPI -->
+        <!-- Jauge d'espace mémoire -->
         <div class="gauge-container">
           <div class="gauge-header">
-            <span>Espace mémoire Flash externe utilisé</span>
-            <span id="gauge-text">0,08 Mo / 2,0 Mo alloués (4%)</span>
+            <span>MEMOIRE FLASH OCTOSPI RESERVEE</span>
+            <span id="gauge-text">0.08 MO / 2.0 MO (4%)</span>
           </div>
           <div class="gauge-track">
             <div id="gauge-fill" class="gauge-fill" style="width: 4%;"></div>
           </div>
         </div>
 
-        <!-- Gestionnaire de liste de ROMs -->
+        <!-- Tableau des jeux -->
         <div id="rom-list-container"></div>
 
         <!-- Boutons d'action -->
-        <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
           <button id="btn-flash-custom" class="btn btn-primary requires-webusb" disabled>
-            Générer et Flasher
+            GENERER ET FLASHER
           </button>
           <button id="btn-download-bin" class="btn btn-secondary">
-            Télécharger le binaire (.bin)
+            TELECHARGER .BIN
           </button>
         </div>
 
-        <!-- Console compacte d'état -->
-        <div class="console-box" id="creator-console" style="margin-top: 16px;">
-          <div class="console-line info">Prêt. Ajoutez des ROMs .nes pour commencer l'assemblage.</div>
+        <div class="console-box" id="creator-console">
+          <div class="console-line info">Prêt. Ajoutez des fichiers .nes pour construire la table d'indexation.</div>
         </div>
         <div class="progress-track">
           <div id="creator-progress" class="progress-fill"></div>
@@ -135,15 +145,16 @@
     </section>
 
     <!-- ====================================================================
-         VUE 3 : COMMANDES & SÉCURITÉ
+         ONGLET 3 : COMMANDES & SÉCURITÉ
          ==================================================================== -->
     <section id="tab-controls" class="tab-content">
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Mapping des Commandes</h2>
-            <p class="card-subtitle">Correspondance exacte entre le clavier NumWorks et la manette NES.</p>
+            <h2 class="card-title">MAPPING DES TOUCHES (NUMWORKS -> NES)</h2>
+            <p class="card-subtitle">Correspondance matérielle des registres du clavier EADK.</p>
           </div>
+          <span class="badge-tag">CONTROLES</span>
         </div>
 
         <div class="controls-grid">
@@ -151,30 +162,30 @@
             <table class="key-table">
               <thead>
                 <tr>
-                  <th>Touche NumWorks</th>
-                  <th>Action NES</th>
+                  <th>TOUCHE NUMWORKS</th>
+                  <th>REGISTRE NES</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><span class="kbd">Flèches Directionnelles</span></td>
-                  <td>Croix directionnelle (Haut, Bas, Gauche, Droite)</td>
+                  <td><span class="kbd">FLECHES</span></td>
+                  <td>D-PAD (HAUT / BAS / GAUCHE / DROITE)</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Retour</span> ou <span class="kbd">EXE</span></td>
-                  <td><strong>Bouton A</strong> (Saut / Validation principale)</td>
+                  <td><span class="kbd">RETOUR</span> / <span class="kbd">EXE</span></td>
+                  <td>BOUTON A</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">OK</span> ou <span class="kbd">Ans</span></td>
-                  <td><strong>Bouton B</strong> (Attaque / Course)</td>
+                  <td><span class="kbd">OK</span> / <span class="kbd">ANS</span></td>
+                  <td>BOUTON B</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Backspace (Effacer)</span></td>
-                  <td><strong>Start</strong> (Pause / Début de partie)</td>
+                  <td><span class="kbd">BACKSPACE</span></td>
+                  <td>START</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Shift</span> (Jaune)</td>
-                  <td><strong>Select</strong> (Sélection d'options)</td>
+                  <td><span class="kbd">SHIFT</span></td>
+                  <td>SELECT</td>
                 </tr>
               </tbody>
             </table>
@@ -184,78 +195,72 @@
             <table class="key-table">
               <thead>
                 <tr>
-                  <th>Raccourci Émulateur</th>
-                  <th>Fonctionnalité</th>
+                  <th>RACCOURCI</th>
+                  <th>FONCTION</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><span class="kbd">Boîte à outils</span> ou <span class="kbd">Var</span></td>
-                  <td>Ouvrir le <strong>Menu Pause</strong></td>
+                  <td><span class="kbd">BOITE A OUTILS</span> / <span class="kbd">VAR</span></td>
+                  <td>MENU PAUSE</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Shift</span> + <span class="kbd">Retour</span></td>
-                  <td>Menu Pause rapide</td>
+                  <td><span class="kbd">SHIFT</span> + <span class="kbd">RETOUR</span></td>
+                  <td>MENU PAUSE ALTERNATIF</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Menu Pause &gt; Sauvegarder</span></td>
-                  <td>Sauvegarde de l'état (Flash persistante)</td>
+                  <td><span class="kbd">MENU > SAVE</span></td>
+                  <td>SAUVEGARDE ETAT FLASH</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Menu Pause &gt; Vitesse</span></td>
-                  <td>Basculer en Avance Rapide (Fast Forward)</td>
+                  <td><span class="kbd">MENU > SPEED</span></td>
+                  <td>AVANCE RAPIDE (FAST FORWARD)</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">Menu Pause &gt; Quitter</span></td>
-                  <td>Retourner à la liste des jeux</td>
+                  <td><span class="kbd">MENU > QUIT</span></td>
+                  <td>RETOUR CATALOGUE</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- Touche d'urgence -->
         <div class="highlight-box">
-          <div class="highlight-title">
-            <span>⚡ Touche d'Urgence : Sortie Immédiate</span>
-          </div>
+          <div class="highlight-title">INTERRUPTION D'URGENCE (HARDWARE KILL-SWITCH)</div>
           <div class="highlight-desc">
-            En appuyant sur la touche <strong>Home (Maison)</strong> ou la touche <strong>Power / Marche-Arrêt</strong>, l'émulateur est instantanément interrompu au niveau matériel par le système Epsilon. La calculatrice revient en une fraction de seconde à l'écran d'accueil sans aucune trace résiduelle à l'écran.
+            L'appui sur la touche <strong>HOME (MAISON)</strong> ou <strong>POWER</strong> déclenche une interruption matérielle immédiate gérée par l'OS Epsilon. L'émulateur est tué sans latence et le système retourne à l'écran d'accueil sans persistance d'affichage.
           </div>
         </div>
       </div>
 
-      <!-- Note pédagogique et légale sur le Mode Examen -->
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Intégrité Matérielle & Mode Examen</h2>
-            <p class="card-subtitle">Fonctionnement en espace utilisateur sans modification de l'OS officiel.</p>
+            <h2 class="card-title">SECURITE SYSTEME & MODE EXAMEN</h2>
+            <p class="card-subtitle">Isolation mémoire et conformité réglementaire.</p>
           </div>
+          <span class="badge-tag">ISOLATION</span>
         </div>
 
-        <p style="font-size: 13px; line-height: 1.6; color: var(--text-main); margin-bottom: 12px;">
-          Nofrendo est compilé via l'API officielle <strong>EADK (External Application Development Kit)</strong> de NumWorks. 
-          L'application réside exclusivement dans l'espace mémoire externe alloué aux applications tierces. 
-          Elle n'altère en aucun cas le noyau, la mémoire interne protégée ni les partitions officielles du système Epsilon.
+        <p style="font-size: 12px; line-height: 1.5; color: var(--text-muted); margin-bottom: 8px;">
+          L'application est compilée avec l'API standard <strong>EADK</strong> et s'exécute exclusivement en espace utilisateur dans la Flash OctoSPI externe (0x90570000). Le noyau Epsilon, les partitions protégées et le bootloader interne ne sont jamais modifiés.
         </p>
-        <p style="font-size: 13px; line-height: 1.6; color: var(--text-main);">
-          <strong>Conformité Baccalauréat / Examens :</strong> Lors de l'activation du <strong>Mode Examen</strong> officiel (voyant lumineux clignotant), 
-          le système d'exploitation NumWorks désactive et verrouille automatiquement l'accès à l'ensemble des applications externes installées. 
-          Votre calculatrice demeure 100% conforme aux exigences des épreuves officielles.
+        <p style="font-size: 12px; line-height: 1.5; color: var(--text-muted);">
+          <strong>Conformité Mode Examen :</strong> Lors de l'activation du Mode Examen officiel (LED clignotante), le système Epsilon verrouille et désactive automatiquement toutes les applications externes. L'appareil est immédiatement conforme aux réglementations d'examen.
         </p>
       </div>
     </section>
 
   </main>
 
-  <!-- Bas de page & Mentions légales obligatoires (Modèle BYOR) -->
+  <!-- Bas de page & mentions -->
   <footer class="footer-container">
     <div class="footer-inner">
       <div class="footer-links">
-        <a href="https://github.com/LaPatateDeJP1/nofrendo-numworks" target="_blank" rel="noopener">Dépôt GitHub</a>
-        <a href="https://nesdev.org" target="_blank" rel="noopener">NESdev Wiki & Homebrews légaux</a>
-        <a href="https://itch.io/games/tag-nes" target="_blank" rel="noopener">Jeux indépendants NES (itch.io)</a>
+        <a href="https://github.com/LaPatateDeJP1/nofrendo-numworks" target="_blank" rel="noopener">DEPOT GITHUB</a>
+        <a href="https://www.nesdev.org/wiki/INES" target="_blank" rel="noopener">SPECIFICATION INES</a>
+        <a href="https://nesdev.org" target="_blank" rel="noopener">NESDEV WIKI</a>
+        <a href="https://itch.io/games/tag-nes" target="_blank" rel="noopener">ITCH.IO HOMEBREWS</a>
       </div>
       <p class="footer-legal">
         Mentions légales : Nofrendo est un émulateur distribué sous licence GPL. Ce projet open source indépendant n'est ni affilié à, ni approuvé par NumWorks ou Nintendo. Cette plateforme ne distribue ni n'héberge aucun contenu protégé par le droit d'auteur. L'utilisateur est seul responsable des fichiers de sauvegarde personnelle (.nes) qu'il choisit d'intégrer dans son appareil.

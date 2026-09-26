@@ -280,18 +280,18 @@ function updateCreatorUI() {
   let totalBytes = EMULATOR_BASE_BYTES;
 
   if (state.romList.length === 0) {
-    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 24px;">Aucune ROM ajoutée. Glissez-déposez des fichiers .nes ci-dessus.</div>`;
+    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 16px; font-family: var(--font-mono); font-size: 11px;">AUCUNE ROM CHARGEE. GLISSEZ DES FICHIERS .NES CI-DESSUS.</div>`;
   } else {
     const table = document.createElement("table");
     table.className = "rom-table";
     table.innerHTML = `
       <thead>
         <tr>
-          <th style="width:30px">#</th>
-          <th>Titre du Jeu (Cliquer pour éditer)</th>
-          <th style="width:90px">Mapper</th>
-          <th style="width:100px">Poids</th>
-          <th style="width:80px; text-align:right">Actions</th>
+          <th style="width:24px">#</th>
+          <th>TITRE (EDITABLE)</th>
+          <th style="width:80px">MAPPER</th>
+          <th style="width:80px">TAILLE</th>
+          <th style="width:90px; text-align:right">ACTIONS</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -309,12 +309,12 @@ function updateCreatorUI() {
         <td>
           <input type="text" class="rom-title-input" value="${escapeHtml(rom.title)}" maxlength="31" data-idx="${index}">
         </td>
-        <td class="rom-meta">MMC ${rom.mapper}</td>
+        <td class="rom-meta">MAP ${rom.mapper}</td>
         <td class="rom-meta">${Math.round(rom.size / 1024)} Ko</td>
         <td class="rom-actions">
-          <button class="icon-btn btn-up" data-idx="${index}" title="Monter" ${index === 0 ? "disabled" : ""}>▲</button>
-          <button class="icon-btn btn-down" data-idx="${index}" title="Descendre" ${index === state.romList.length - 1 ? "disabled" : ""}>▼</button>
-          <button class="icon-btn btn-del" data-idx="${index}" title="Supprimer">✕</button>
+          <button class="icon-btn btn-up" data-idx="${index}" ${index === 0 ? "disabled" : ""}>UP</button>
+          <button class="icon-btn btn-down" data-idx="${index}" ${index === state.romList.length - 1 ? "disabled" : ""}>DN</button>
+          <button class="icon-btn btn-del" data-idx="${index}">DEL</button>
         </td>
       `;
 
