@@ -6,11 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define RAM_STATE_MAX_SIZE (64 * 1024)
+#define RAM_STATE_MAX_SIZE (24 * 1024)
 
-static uint8_t s_ram_state_buf[RAM_STATE_MAX_SIZE];
+static uint8_t *s_ram_state_buf = NULL;
 static size_t s_ram_state_len = 0;
-static bool s_ram_state_valid = false;
+static int s_ram_state_valid = 0;
 
 typedef struct {
   uint8_t *data;
@@ -19,11 +19,11 @@ typedef struct {
 } statefile_desc_t;
 
 int ram_state_exists(void) {
-  return (s_ram_state_valid && (s_ram_state_len > 0)) ? 1 : 0;
+  return (s_ram_state_valid && s_ram_state_buf && (s_ram_state_len > 0)) ? 1 : 0;
 }
 
 void ram_state_clear(void) {
-  s_ram_state_valid = false;
+  s_ram_state_valid = 0;
   s_ram_state_len = 0;
 }
 
@@ -43,7 +43,7 @@ FILE * statefile_fopen(const char *pathname, const char *mode) {
   if (!s) return NULL;
 
   if (mode[0] == 'r') {
-    if (!s_ram_state_valid || s_ram_state_len == 0) {
+    if (!s_ram_state_valid || !s_ram_state_buf || s_ram_state_len == 0) {
       free(s);
       return NULL;
     }
@@ -51,8 +51,15 @@ FILE * statefile_fopen(const char *pathname, const char *mode) {
     s->pos = 0;
     s->isWrite = 0;
   } else if (mode[0] == 'w') {
+    if (!s_ram_state_buf) {
+      s_ram_state_buf = (uint8_t *)malloc(RAM_STATE_MAX_SIZE);
+      if (!s_ram_state_buf) {
+        free(s);
+        return NULL;
+      }
+    }
     s_ram_state_len = 0;
-    s_ram_state_valid = false;
+    s_ram_state_valid = 0;
     s->data = s_ram_state_buf;
     s->pos = 0;
     s->isWrite = 1;
@@ -68,7 +75,7 @@ int statefile_fclose(FILE *stream) {
   if (!s) return 0;
   if (s->isWrite) {
     if (s_ram_state_len > 0) {
-      s_ram_state_valid = true;
+      s_ram_state_valid = 1;
     }
   }
   free(s);

@@ -23,7 +23,7 @@
 #define COLOR_ALERT_BG     ((eadk_color_t)0x8000)
 
 #define VISIBLE_ITEMS      7
-#define TOTAL_ITEMS        11
+#define TOTAL_ITEMS        10
 
 enum {
   ITEM_RESUME = 0,
@@ -32,7 +32,6 @@ enum {
   ITEM_SPEED,
   ITEM_SCALE,
   ITEM_PALETTE,
-  ITEM_BRIGHTNESS,
   ITEM_FPS,
   ITEM_LANGUAGE,
   ITEM_RESET,
@@ -129,11 +128,6 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
             snprintf(label, sizeof(label), "%s: %s",
                      i18n_str(STR_PAUSE_PALETTE),
                      display_get_palette_mode_name(display_get_palette_mode()));
-            break;
-          case ITEM_BRIGHTNESS:
-            snprintf(label, sizeof(label), "%s: %d%%",
-                     i18n_str(STR_PAUSE_BRIGHTNESS),
-                     settings_get_brightness_pct());
             break;
           case ITEM_FPS:
             snprintf(label, sizeof(label), "%s: %s",
@@ -289,11 +283,6 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
           needs_redraw = true;
           break;
         }
-
-        case ITEM_BRIGHTNESS:
-          settings_cycle_brightness();
-          needs_redraw = true;
-          break;
 
         case ITEM_FPS: {
           bool cur_fps = display_get_show_fps();
