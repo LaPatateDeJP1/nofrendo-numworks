@@ -3,37 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NOFRENDO // NUMWORKS N0120 WEB FLASHER</title>
+  <title>Nofrendo — Flasher Web NumWorks N0120</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 rx=%222%22 fill=%22%23FFC300%22/><rect x=%223%22 y=%223%22 width=%2210%22 height=%2210%22 fill=%22%23111827%22/></svg>">
 </head>
 <body>
 
-  <!-- En-tête compact -->
+  <!-- En-tête épuré -->
   <header class="header-container">
     <div class="header-inner">
       <div class="brand">
-        <span class="brand-title">NOFRENDO</span>
-        <span class="badge-tag">N0120</span>
-        <span class="badge-tag">STM32H725</span>
-        <span class="badge-tag">OCTOSPI</span>
+        <span class="brand-title">Nofrendo</span>
       </div>
       <div class="usb-indicator">
         <span id="usb-dot" class="dot-status"></span>
-        <span id="usb-text">DECONNECTE</span>
+        <span id="usb-text">Déconnecté</span>
       </div>
     </div>
     
     <!-- Barre d'onglets textuelle -->
     <nav class="nav-tabs">
       <button class="nav-tab-btn active" data-tab="tab-express">
-        [01] FLASH EXPRESS
+        Flash express
       </button>
       <button class="nav-tab-btn" data-tab="tab-creator">
-        [02] CREATEUR DE PACK
+        Créateur de pack
       </button>
       <button class="nav-tab-btn" data-tab="tab-controls">
-        [03] COMMANDES & SECURITE
+        Aide & commandes
       </button>
     </nav>
   </header>
@@ -51,71 +48,57 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">INSTALLATION EXPRESS (HOMEBREW LIBRE)</h2>
-            <p class="card-subtitle">Flash direct du binaire précompilé intégrant 2048.nes.</p>
-          </div>
-          <span class="badge-tag">PRECOMPILÉ</span>
-        </div>
-
-        <div class="spec-grid">
-          <div class="spec-item">
-            <span class="spec-label">Cible Matérielle</span>
-            <span class="spec-val">NumWorks N0120 (STM32H725)</span>
-          </div>
-          <div class="spec-item">
-            <span class="spec-label">Adresse Flash</span>
-            <span class="spec-val">0x90570000 (OctoSPI XIP)</span>
-          </div>
-          <div class="spec-item">
-            <span class="spec-label">RAM Allouée</span>
-            <span class="spec-val">0x24012804 (AXI SRAM)</span>
-          </div>
-          <div class="spec-item">
-            <span class="spec-label">Payload</span>
-            <span class="spec-val">nofrendo_express.bin (~98 Ko)</span>
+            <h2 class="card-title">Flash express</h2>
+            <p class="card-subtitle">Binaire précompilé intégrant 2048.nes (~98 Ko)</p>
           </div>
         </div>
 
         <div style="margin-top: 14px;">
           <button id="btn-flash-express" class="btn btn-primary requires-webusb">
-            INSTALLER SUR LA NUMWORKS
+            Installer sur la calculatrice
           </button>
         </div>
 
-        <div class="console-box" id="express-console">
-          <div class="console-line info">En attente de connexion USB...</div>
-        </div>
-        <div class="progress-track">
-          <div id="express-progress" class="progress-fill"></div>
+        <div class="status-container">
+          <div id="express-status" class="status-line">En attente de connexion USB...</div>
+          <div class="progress-track">
+            <div id="express-progress" class="progress-fill"></div>
+          </div>
+          <details class="log-details" id="express-details">
+            <summary>Afficher les logs détaillés</summary>
+            <div class="console-box" id="express-console">
+              <div class="console-line info">En attente de connexion USB...</div>
+            </div>
+          </details>
         </div>
       </div>
     </section>
 
     <!-- ====================================================================
-         ONGLET 2 : CRÉATEUR DE PACK (Constructeur dynamique client-side)
+         ONGLET 2 : CRÉATEUR DE PACK
          ==================================================================== -->
     <section id="tab-creator" class="tab-content">
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">CONSTRUCTEUR DE PACK MULTI-ROMS</h2>
-            <p class="card-subtitle">Injection binaire côté client dans le template EADK sans recompilation.</p>
+            <h2 class="card-title">Créateur de pack</h2>
+            <p class="card-subtitle">Injection des jeux dans le binaire sans recompilation</p>
           </div>
-          <span class="badge-tag"><span id="rom-count">0</span> JEU(X)</span>
+          <span class="badge-tag"><span id="rom-count">0</span> jeu(x)</span>
         </div>
 
         <!-- Zone Glisser-Déposer -->
         <input type="file" id="file-input" accept=".nes" multiple style="display: none;">
         <div id="dropzone" class="dropzone">
-          <div class="dropzone-text">GLISSER LES FICHIERS .NES ICI OU CLIQUER POUR PARCOURIR</div>
-          <div class="dropzone-hint">Format iNES standard (en-tête 0x4E 0x45 0x53 0x1A) • Mappers 0, 1, 2, 3, 4, 7...</div>
+          <div class="dropzone-text">Glissez des fichiers .nes ici ou cliquez pour parcourir</div>
+          <div class="dropzone-hint">Format iNES standard (.nes) • Mappers 0, 1, 2, 3, 4, 7...</div>
         </div>
 
         <!-- Jauge d'espace mémoire -->
         <div class="gauge-container">
           <div class="gauge-header">
-            <span>MEMOIRE FLASH OCTOSPI RESERVEE</span>
-            <span id="gauge-text">0.08 MO / 2.0 MO (4%)</span>
+            <span>Mémoire Flash réservée</span>
+            <span id="gauge-text">0,08 Mo / 2,0 Mo (4%)</span>
           </div>
           <div class="gauge-track">
             <div id="gauge-fill" class="gauge-fill" style="width: 4%;"></div>
@@ -128,18 +111,24 @@
         <!-- Boutons d'action -->
         <div style="display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;">
           <button id="btn-flash-custom" class="btn btn-primary requires-webusb" disabled>
-            GENERER ET FLASHER
+            Générer et flasher
           </button>
           <button id="btn-download-bin" class="btn btn-secondary">
-            TELECHARGER .BIN
+            Télécharger .bin
           </button>
         </div>
 
-        <div class="console-box" id="creator-console">
-          <div class="console-line info">Prêt. Ajoutez des fichiers .nes pour construire la table d'indexation.</div>
-        </div>
-        <div class="progress-track">
-          <div id="creator-progress" class="progress-fill"></div>
+        <div class="status-container">
+          <div id="creator-status" class="status-line">Prêt. Ajoutez des fichiers .nes pour construire votre pack.</div>
+          <div class="progress-track">
+            <div id="creator-progress" class="progress-fill"></div>
+          </div>
+          <details class="log-details" id="creator-details">
+            <summary>Afficher les logs détaillés</summary>
+            <div class="console-box" id="creator-console">
+              <div class="console-line info">Prêt. Ajoutez des fichiers .nes pour construire la table d'indexation.</div>
+            </div>
+          </details>
         </div>
       </div>
     </section>
@@ -151,10 +140,9 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">MAPPING DES TOUCHES (NUMWORKS -> NES)</h2>
-            <p class="card-subtitle">Correspondance matérielle des registres du clavier EADK.</p>
+            <h2 class="card-title">Commandes de jeu</h2>
+            <p class="card-subtitle">Correspondance des touches de la NumWorks vers la NES</p>
           </div>
-          <span class="badge-tag">CONTROLES</span>
         </div>
 
         <div class="controls-grid">
@@ -162,30 +150,30 @@
             <table class="key-table">
               <thead>
                 <tr>
-                  <th>TOUCHE NUMWORKS</th>
-                  <th>REGISTRE NES</th>
+                  <th>Touche NumWorks</th>
+                  <th>Action NES</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><span class="kbd">FLECHES</span></td>
-                  <td>D-PAD (HAUT / BAS / GAUCHE / DROITE)</td>
+                  <td><span class="kbd">Flèches</span></td>
+                  <td>Croix directionnelle (D-Pad)</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">RETOUR</span> / <span class="kbd">EXE</span></td>
-                  <td>BOUTON A</td>
+                  <td><span class="kbd">Retour</span> / <span class="kbd">Exe</span></td>
+                  <td>Bouton A</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">OK</span> / <span class="kbd">ANS</span></td>
-                  <td>BOUTON B</td>
+                  <td><span class="kbd">OK</span> / <span class="kbd">Ans</span></td>
+                  <td>Bouton B</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">BACKSPACE</span></td>
-                  <td>START</td>
+                  <td><span class="kbd">Backspace</span></td>
+                  <td>Start</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">SHIFT</span></td>
-                  <td>SELECT</td>
+                  <td><span class="kbd">Shift</span></td>
+                  <td>Select</td>
                 </tr>
               </tbody>
             </table>
@@ -195,30 +183,30 @@
             <table class="key-table">
               <thead>
                 <tr>
-                  <th>RACCOURCI</th>
-                  <th>FONCTION</th>
+                  <th>Raccourci</th>
+                  <th>Fonction</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><span class="kbd">BOITE A OUTILS</span> / <span class="kbd">VAR</span></td>
-                  <td>MENU PAUSE</td>
+                  <td><span class="kbd">Boîte à outils</span> / <span class="kbd">Var</span></td>
+                  <td>Menu pause</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">SHIFT</span> + <span class="kbd">RETOUR</span></td>
-                  <td>MENU PAUSE ALTERNATIF</td>
+                  <td><span class="kbd">Shift</span> + <span class="kbd">Retour</span></td>
+                  <td>Menu pause alternatif</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">MENU > SAVE</span></td>
-                  <td>SAUVEGARDE ETAT FLASH</td>
+                  <td><span class="kbd">Menu</span> → Sauvegarder</td>
+                  <td>Sauvegarde d'état (Flash)</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">MENU > SPEED</span></td>
-                  <td>AVANCE RAPIDE (FAST FORWARD)</td>
+                  <td><span class="kbd">Menu</span> → Vitesse</td>
+                  <td>Avance rapide</td>
                 </tr>
                 <tr>
-                  <td><span class="kbd">MENU > QUIT</span></td>
-                  <td>RETOUR CATALOGUE</td>
+                  <td><span class="kbd">Menu</span> → Quitter</td>
+                  <td>Retour au catalogue de jeux</td>
                 </tr>
               </tbody>
             </table>
@@ -226,9 +214,9 @@
         </div>
 
         <div class="highlight-box">
-          <div class="highlight-title">INTERRUPTION D'URGENCE (HARDWARE KILL-SWITCH)</div>
+          <div class="highlight-title">Interruption d'urgence (kill-switch)</div>
           <div class="highlight-desc">
-            L'appui sur la touche <strong>HOME (MAISON)</strong> ou <strong>POWER</strong> déclenche une interruption matérielle immédiate gérée par l'OS Epsilon. L'émulateur est tué sans latence et le système retourne à l'écran d'accueil sans persistance d'affichage.
+            L'appui sur la touche <strong>Home (Maison)</strong> ou <strong>Power</strong> déclenche une interruption matérielle immédiate gérée par le système Epsilon. L'émulateur est fermé sans latence et la calculatrice retourne à l'écran d'accueil sans persistance d'affichage.
           </div>
         </div>
       </div>
@@ -236,17 +224,16 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">SECURITE SYSTEME & MODE EXAMEN</h2>
-            <p class="card-subtitle">Isolation mémoire et conformité réglementaire.</p>
+            <h2 class="card-title">Mode examen & sécurité</h2>
+            <p class="card-subtitle">Isolation mémoire et conformité réglementaire</p>
           </div>
-          <span class="badge-tag">ISOLATION</span>
         </div>
 
         <p style="font-size: 12px; line-height: 1.5; color: var(--text-muted); margin-bottom: 8px;">
-          L'application est compilée avec l'API standard <strong>EADK</strong> et s'exécute exclusivement en espace utilisateur dans la Flash OctoSPI externe (0x90570000). Le noyau Epsilon, les partitions protégées et le bootloader interne ne sont jamais modifiés.
+          L'application est compilée avec l'API standard <strong>EADK</strong> et s'exécute exclusivement en espace utilisateur dans la mémoire Flash externe. Le système Epsilon, les partitions protégées et le bootloader interne ne sont jamais altérés.
         </p>
         <p style="font-size: 12px; line-height: 1.5; color: var(--text-muted);">
-          <strong>Conformité Mode Examen :</strong> Lors de l'activation du Mode Examen officiel (LED clignotante), le système Epsilon verrouille et désactive automatiquement toutes les applications externes. L'appareil est immédiatement conforme aux réglementations d'examen.
+          <strong>Conformité mode examen :</strong> Lors de l'activation du mode examen officiel (LED rouge clignotante), le système Epsilon verrouille et désactive automatiquement toutes les applications externes. L'appareil est immédiatement conforme aux réglementations officielles.
         </p>
       </div>
     </section>
@@ -257,10 +244,10 @@
   <footer class="footer-container">
     <div class="footer-inner">
       <div class="footer-links">
-        <a href="https://github.com/LaPatateDeJP1/nofrendo-numworks" target="_blank" rel="noopener">DEPOT GITHUB</a>
-        <a href="https://www.nesdev.org/wiki/INES" target="_blank" rel="noopener">SPECIFICATION INES</a>
-        <a href="https://nesdev.org" target="_blank" rel="noopener">NESDEV WIKI</a>
-        <a href="https://itch.io/games/tag-nes" target="_blank" rel="noopener">ITCH.IO HOMEBREWS</a>
+        <a href="https://github.com/LaPatateDeJP1/nofrendo-numworks" target="_blank" rel="noopener">Dépôt GitHub</a>
+        <a href="https://www.nesdev.org/wiki/INES" target="_blank" rel="noopener">Spécification iNES</a>
+        <a href="https://nesdev.org" target="_blank" rel="noopener">NesDev Wiki</a>
+        <a href="https://itch.io/games/tag-nes" target="_blank" rel="noopener">Homebrews itch.io</a>
       </div>
       <p class="footer-legal">
         Mentions légales : Nofrendo est un émulateur distribué sous licence GPL. Ce projet open source indépendant n'est ni affilié à, ni approuvé par NumWorks ou Nintendo. Cette plateforme ne distribue ni n'héberge aucun contenu protégé par le droit d'auteur. L'utilisateur est seul responsable des fichiers de sauvegarde personnelle (.nes) qu'il choisit d'intégrer dans son appareil.

@@ -280,7 +280,7 @@ function updateCreatorUI() {
   let totalBytes = EMULATOR_BASE_BYTES;
 
   if (state.romList.length === 0) {
-    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 16px; font-family: var(--font-mono); font-size: 11px;">AUCUNE ROM CHARGEE. GLISSEZ DES FICHIERS .NES CI-DESSUS.</div>`;
+    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 16px; font-size: 12px;">Aucune ROM chargée. Glissez des fichiers .nes ci-dessus.</div>`;
   } else {
     const table = document.createElement("table");
     table.className = "rom-table";
@@ -288,10 +288,10 @@ function updateCreatorUI() {
       <thead>
         <tr>
           <th style="width:24px">#</th>
-          <th>TITRE (EDITABLE)</th>
-          <th style="width:80px">MAPPER</th>
-          <th style="width:80px">TAILLE</th>
-          <th style="width:90px; text-align:right">ACTIONS</th>
+          <th>Titre (éditable)</th>
+          <th style="width:70px">Mapper</th>
+          <th style="width:70px">Taille</th>
+          <th style="width:70px; text-align:right">Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -309,12 +309,12 @@ function updateCreatorUI() {
         <td>
           <input type="text" class="rom-title-input" value="${escapeHtml(rom.title)}" maxlength="31" data-idx="${index}">
         </td>
-        <td class="rom-meta">MAP ${rom.mapper}</td>
+        <td class="rom-meta">Mapper ${rom.mapper}</td>
         <td class="rom-meta">${Math.round(rom.size / 1024)} Ko</td>
         <td class="rom-actions">
-          <button class="icon-btn btn-up" data-idx="${index}" ${index === 0 ? "disabled" : ""}>UP</button>
-          <button class="icon-btn btn-down" data-idx="${index}" ${index === state.romList.length - 1 ? "disabled" : ""}>DN</button>
-          <button class="icon-btn btn-del" data-idx="${index}">DEL</button>
+          <button class="icon-btn btn-up" data-idx="${index}" ${index === 0 ? "disabled" : ""} title="Monter">↑</button>
+          <button class="icon-btn btn-down" data-idx="${index}" ${index === state.romList.length - 1 ? "disabled" : ""} title="Descendre">↓</button>
+          <button class="icon-btn btn-del" data-idx="${index}" title="Supprimer">×</button>
         </td>
       `;
 
@@ -533,6 +533,22 @@ function logConsole(consoleEl, msg, type = "info") {
   line.textContent = `[${time}] ${msg}`;
   consoleEl.appendChild(line);
   consoleEl.scrollTop = consoleEl.scrollHeight;
+
+  // Mise à jour de la ligne de statut discrète
+  const statusId = consoleEl.id === "express-console" ? "express-status" : (consoleEl.id === "creator-console" ? "creator-status" : null);
+  if (statusId) {
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) {
+      statusEl.textContent = msg;
+      statusEl.className = `status-line ${type}`;
+    }
+  }
+
+  // Dépliage automatique des logs en cas d'erreur
+  if (type === "error") {
+    const details = consoleEl.closest("details");
+    if (details) details.open = true;
+  }
 }
 
 function updateUsbBadge(connected, text) {

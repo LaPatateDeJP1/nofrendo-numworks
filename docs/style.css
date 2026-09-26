@@ -1,11 +1,10 @@
 /* ==========================================================================
-   NOFRENDO NUMWORKS - UTILITAIRE D'INGÉNIERIE BRUT ET COMPACT
-   Inspiration : ESP Web Tools / GitHub / Teenage Engineering
-   Zéro box-shadow, bordures 1px nettes, border-radius max 2px, typographie monospace technique.
+   Nofrendo NumWorks — Interface utilitaire sobre et minimaliste
+   Style d'outil d'ingénierie : bordures 1px nettes, zéro ombres, sentence case.
    ========================================================================== */
 
 :root {
-  --bg-page: #F8F9FA;
+  --bg-page: #F9FAFB;
   --bg-card: #FFFFFF;
   --bg-subtle: #F3F4F6;
   --border-light: #E5E7EB;
@@ -22,7 +21,7 @@
   --status-green: #059669;
   --status-red: #DC2626;
 
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Courier New", monospace;
 }
 
@@ -37,21 +36,21 @@ body {
   color: var(--text-main);
   font-family: var(--font-sans);
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Header Compact */
+/* En-tête */
 .header-container {
   border-bottom: 1px solid var(--border-light);
   background-color: var(--bg-card);
 }
 
 .header-inner {
-  max-width: 920px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 10px 16px;
   display: flex;
@@ -66,11 +65,9 @@ body {
 }
 
 .brand-title {
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
   color: var(--text-main);
 }
 
@@ -82,7 +79,6 @@ body {
   padding: 2px 6px;
   border-radius: 2px;
   color: var(--text-muted);
-  text-transform: uppercase;
 }
 
 .usb-indicator {
@@ -108,9 +104,9 @@ body {
   background-color: var(--status-green);
 }
 
-/* Barre d'onglets compacte */
+/* Barre d'onglets */
 .nav-tabs {
-  max-width: 920px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 0 16px;
   display: flex;
@@ -124,11 +120,9 @@ body {
   border: none;
   border-bottom: 2px solid transparent;
   padding: 8px 4px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
@@ -142,12 +136,13 @@ body {
 
 .nav-tab-btn.active {
   color: var(--text-main);
+  font-weight: 600;
   border-bottom-color: var(--accent-yellow);
 }
 
 /* Conteneur principal */
 .main-wrapper {
-  max-width: 920px;
+  max-width: 860px;
   width: 100%;
   margin: 16px auto;
   padding: 0 16px;
@@ -182,48 +177,15 @@ body {
 }
 
 .card-title {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-main);
 }
 
 .card-subtitle {
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: 3px;
-}
-
-/* Grille d'information technique */
-.spec-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-.spec-item {
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-light);
-  padding: 6px 10px;
-  border-radius: 2px;
-}
-
-.spec-label {
-  color: var(--text-light);
-  display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.spec-val {
-  color: var(--text-main);
-  font-weight: 600;
+  margin-top: 2px;
 }
 
 /* Alertes & bannières */
@@ -242,23 +204,15 @@ body {
   color: #92400E;
 }
 
-.alert-info {
-  background-color: var(--bg-subtle);
-  border-color: var(--border-dark);
-  color: var(--text-main);
-}
-
 /* Boutons d'action */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 7px 14px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
   border-radius: 2px;
   cursor: pointer;
   border: 1px solid transparent;
@@ -313,10 +267,8 @@ body {
 }
 
 .dropzone-text {
-  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
   color: var(--text-main);
 }
 
@@ -339,7 +291,6 @@ body {
   font-family: var(--font-mono);
   margin-bottom: 4px;
   color: var(--text-muted);
-  text-transform: uppercase;
 }
 
 .gauge-track {
@@ -372,9 +323,8 @@ body {
 
 .rom-table th {
   text-align: left;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-light);
   padding: 6px 8px;
   border-bottom: 1px solid var(--border-light);
@@ -402,9 +352,9 @@ body {
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   padding: 2px 4px;
   border-radius: 1px;
@@ -440,37 +390,108 @@ body {
   border-radius: 1px;
   padding: 2px 6px;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-muted);
 }
 
-.icon-btn:hover {
+.icon-btn:hover:not(:disabled) {
   background-color: var(--bg-subtle);
   color: var(--text-main);
   border-color: var(--border-dark);
 }
 
-.icon-btn.btn-del:hover {
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.icon-btn.btn-del:hover:not(:disabled) {
   background-color: #FEE2E2;
   border-color: #FCA5A5;
   color: var(--status-red);
 }
 
-/* Console de Logs */
+/* Zone de statut & logs discrets */
+.status-container {
+  margin-top: 12px;
+}
+
+.status-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  min-height: 18px;
+  margin-bottom: 4px;
+}
+
+.status-line.success {
+  color: var(--status-green);
+  font-weight: 600;
+}
+
+.status-line.error {
+  color: var(--status-red);
+  font-weight: 600;
+}
+
+.status-line.cmd {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.progress-track {
+  width: 100%;
+  height: 3px;
+  background-color: var(--border-light);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--accent-yellow);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+.log-details {
+  margin-top: 6px;
+}
+
+.log-details summary {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-light);
+  cursor: pointer;
+  user-select: none;
+  display: inline-block;
+  padding: 2px 0;
+}
+
+.log-details summary:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+.log-details[open] summary {
+  margin-bottom: 6px;
+}
+
+/* Console de Logs détaillée (dans details) */
 .console-box {
   background-color: #111827;
   color: #E5E7EB;
   font-family: var(--font-mono);
   font-size: 11px;
   border-radius: 2px;
-  padding: 10px 12px;
-  height: 120px;
+  padding: 8px 10px;
+  height: 110px;
   overflow-y: auto;
-  line-height: 1.5;
+  line-height: 1.45;
   border: 1px solid #374151;
-  margin-top: 10px;
 }
 
 .console-line {
@@ -493,22 +514,6 @@ body {
   color: var(--accent-yellow);
 }
 
-.progress-track {
-  width: 100%;
-  height: 4px;
-  background-color: #374151;
-  border-radius: 1px;
-  overflow: hidden;
-  margin-top: 6px;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: var(--accent-yellow);
-  width: 0%;
-  transition: width 0.1s linear;
-}
-
 /* Tableau des contrôles */
 .controls-grid {
   display: grid;
@@ -529,10 +534,9 @@ body {
 
 .key-table th {
   text-align: left;
-  font-size: 10px;
-  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-light);
-  text-transform: uppercase;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-subtle);
@@ -565,10 +569,8 @@ body {
 }
 
 .highlight-title {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-main);
   margin-bottom: 4px;
 }
@@ -588,7 +590,7 @@ body {
 }
 
 .footer-inner {
-  max-width: 920px;
+  max-width: 860px;
   margin: 0 auto;
 }
 
@@ -596,7 +598,6 @@ body {
   display: flex;
   gap: 16px;
   margin-bottom: 8px;
-  font-family: var(--font-mono);
   font-size: 11px;
 }
 
