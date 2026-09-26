@@ -24,6 +24,10 @@ void display_set_palette_mode(PaletteMode mode);
 PaletteMode display_get_palette_mode(void);
 const char *display_get_palette_mode_name(PaletteMode mode);
 
+void display_set_show_fps(bool show);
+bool display_get_show_fps(void);
+int display_get_fps(void);
+
 void display_draw_bezels(void);
 
 #endif

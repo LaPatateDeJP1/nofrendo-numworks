@@ -6,6 +6,7 @@
 #include <bitmap.h>
 #include <nes.h>
 #include "display.h"
+#include <stdio.h>
 
 #define DEFAULT_WIDTH        256
 #define DEFAULT_HEIGHT       NES_VISIBLE_HEIGHT
@@ -247,6 +248,23 @@ static void custom_blit(bitmap_t *bmp, int num_dirties, rect_t *dirty_rects) {
   }
 }
 
+static bool s_show_fps = false;
+static int s_current_fps = 60;
+static uint32_t s_frame_count = 0;
+static uint64_t s_last_fps_time = 0;
+
+void display_set_show_fps(bool show) {
+  s_show_fps = show;
+}
+
+bool display_get_show_fps(void) {
+  return s_show_fps;
+}
+
+int display_get_fps(void) {
+  return s_current_fps;
+}
+
 void ppu_scanline_blit(uint8_t *bmp, int scanline, bool draw_flag) {
   if (!draw_flag || scanline < 0 || scanline >= EADK_SCREEN_HEIGHT) {
     return;
@@ -276,5 +294,22 @@ void ppu_scanline_blit(uint8_t *bmp, int scanline, bool draw_flag) {
       line[x] = myPalette[*bmp++];
     }
     eadk_display_push_rect((eadk_rect_t){xoffset, scanline + yoffset, NES_SCREEN_WIDTH, 1}, line);
+  }
+
+  if (scanline == (NES_SCREEN_HEIGHT - 1)) {
+    s_frame_count++;
+    uint64_t now = eadk_timing_millis();
+    if (s_last_fps_time == 0) {
+      s_last_fps_time = now;
+    } else if (now - s_last_fps_time >= 1000) {
+      s_current_fps = (int)(s_frame_count * 1000 / (now - s_last_fps_time));
+      s_frame_count = 0;
+      s_last_fps_time = now;
+    }
+    if (s_show_fps) {
+      char buf[12];
+      sprintf(buf, "%d FPS", s_current_fps);
+      eadk_display_draw_string(buf, (eadk_point_t){4, 4}, false, eadk_color_white, eadk_color_black);
+    }
   }
 }

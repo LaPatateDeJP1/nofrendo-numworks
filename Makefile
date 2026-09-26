@@ -109,6 +109,8 @@ objs += $(addprefix output/, \
   pause_menu.o \
   rom_catalog.o \
   osd.o \
+  i18n.o \
+  settings.o \
   statefile_wrapper.o \
   storage.o \
   stubs.o \

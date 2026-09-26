@@ -1,110 +1,118 @@
 #include "statefile_wrapper.h"
-#include "storage.h"
-#include "lz4.h"
-
+#undef false
+#undef true
+#undef bool
+#include <nesstate.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_FILE_SIZE 8192*4
-#define MAX_SCRIPTSTORE_SIZE 4096*4
+#define RAM_STATE_MAX_SIZE (64 * 1024)
+
+static uint8_t s_ram_state_buf[RAM_STATE_MAX_SIZE];
+static size_t s_ram_state_len = 0;
+static bool s_ram_state_valid = false;
 
 typedef struct {
-	char *fd;
-	size_t pos;
-	int isWrite;
-	char name[256];
+  uint8_t *data;
+  size_t pos;
+  int isWrite;
 } statefile_desc_t;
 
+int ram_state_exists(void) {
+  return (s_ram_state_valid && (s_ram_state_len > 0)) ? 1 : 0;
+}
+
+void ram_state_clear(void) {
+  s_ram_state_valid = false;
+  s_ram_state_len = 0;
+}
+
+int ram_state_save(void) {
+  return state_save();
+}
+
+int ram_state_load(void) {
+  if (!ram_state_exists()) {
+    return -1;
+  }
+  return state_load();
+}
 
 FILE * statefile_fopen(const char *pathname, const char *mode) {
-	statefile_desc_t *s=calloc(sizeof(statefile_desc_t), 1);
-	if (!s) goto err;
-  	strncpy(s->name, pathname, 256);
+  statefile_desc_t *s = (statefile_desc_t *)calloc(sizeof(statefile_desc_t), 1);
+  if (!s) return NULL;
 
-  	// Reading save data
-	if (mode[0]=='r') {
-		if (!extapp_fileExists(pathname)) goto err;
-		s->fd = malloc((size_t)MAX_FILE_SIZE);
-		if (s->fd == NULL) {
-			goto err;
-		}
-		size_t len = 0;
-		const char *compressed_data = extapp_fileRead(pathname, &len);
-		const int decompressed_size = LZ4_decompress_safe(compressed_data, s->fd,
-			len, MAX_FILE_SIZE);
-		if(decompressed_size <= 0) {
-			free(s->fd);
-			goto err;
-		}
-  	// Writing save data
-	} else if (mode[0]=='w') {
-		extapp_fileErase(pathname);
-		s->fd=calloc(MAX_FILE_SIZE, 1);
-		if (s->fd == NULL) {
-			goto err;
-		}
-		s->isWrite=1;
-	} else {
-		goto err;
-	}
-	return (FILE*)s;
-err:
-	// printf("Wrapper: open failed\n");
-	free(s);
-  return NULL;
+  if (mode[0] == 'r') {
+    if (!s_ram_state_valid || s_ram_state_len == 0) {
+      free(s);
+      return NULL;
+    }
+    s->data = s_ram_state_buf;
+    s->pos = 0;
+    s->isWrite = 0;
+  } else if (mode[0] == 'w') {
+    s_ram_state_len = 0;
+    s_ram_state_valid = false;
+    s->data = s_ram_state_buf;
+    s->pos = 0;
+    s->isWrite = 1;
+  } else {
+    free(s);
+    return NULL;
+  }
+  return (FILE *)s;
 }
 
 int statefile_fclose(FILE *stream) {
-  	statefile_desc_t *s=(statefile_desc_t*)stream;
-	if (s->isWrite) {
-		char* compressed_data = malloc((size_t) MAX_SCRIPTSTORE_SIZE);
-		if (compressed_data == NULL) {
-			free(s->fd);
-			free(s);
-			return 1;
-		}
-		const int compressed_data_size = LZ4_compress_default(s->fd, compressed_data,
-			MAX_FILE_SIZE, MAX_SCRIPTSTORE_SIZE);
-		if(compressed_data_size > 0) {
-			// printf("We successfully compressed data: %d\n", compressed_data_size);
-			extapp_fileWrite(s->name, compressed_data, compressed_data_size);
-		}
-		free(compressed_data);
-	}
-	free(s->fd);
-	free(s);
-	return 0;
+  statefile_desc_t *s = (statefile_desc_t *)stream;
+  if (!s) return 0;
+  if (s->isWrite) {
+    if (s_ram_state_len > 0) {
+      s_ram_state_valid = true;
+    }
+  }
+  free(s);
+  return 0;
 }
 
 size_t statefile_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-	statefile_desc_t *s=(statefile_desc_t*)stream;
-	// printf("Wrapper: pos %zd reading %zd\n", s->pos, size*nmemb);
-	if (size*nmemb==0) return nmemb;
-	memcpy(ptr, s->fd + s->pos, size*nmemb);
-	s->pos+=(size*nmemb);
-	return nmemb;
+  statefile_desc_t *s = (statefile_desc_t *)stream;
+  if (!s || size * nmemb == 0) return nmemb;
+  size_t bytes = size * nmemb;
+  if (s->pos + bytes > s_ram_state_len) {
+    bytes = (s_ram_state_len > s->pos) ? (s_ram_state_len - s->pos) : 0;
+  }
+  if (bytes > 0) {
+    memcpy(ptr, s->data + s->pos, bytes);
+    s->pos += bytes;
+  }
+  return (size > 0) ? (bytes / size) : 0;
 }
 
 size_t statefile_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
-	statefile_desc_t *s=(statefile_desc_t*)stream;
-	// printf("Wrapper: pos %zd writing %zd\n", s->pos, size*nmemb);
-	if (size*nmemb==0) return nmemb;
-	if (s->pos + size*nmemb > MAX_FILE_SIZE) return 0;
-	memcpy(s->fd + s->pos, ptr, size*nmemb);
-	s->pos+=(size*nmemb);
-	return nmemb;
+  statefile_desc_t *s = (statefile_desc_t *)stream;
+  if (!s || size * nmemb == 0) return nmemb;
+  size_t bytes = size * nmemb;
+  if (s->pos + bytes > RAM_STATE_MAX_SIZE) {
+    return 0;
+  }
+  memcpy(s->data + s->pos, ptr, bytes);
+  s->pos += bytes;
+  if (s->pos > s_ram_state_len) {
+    s_ram_state_len = s->pos;
+  }
+  return nmemb;
 }
 
 int statefile_fseek(FILE *stream, long offset, int whence) {
-	statefile_desc_t *s=(statefile_desc_t*)stream;
-	int r=s->pos;
-	if (whence==SEEK_SET) {
-		s->pos=offset;
-	} else if (whence==SEEK_CUR) {
-		s->pos+=offset;
-	} else if (whence==SEEK_END) {
-		abort(); //not implemented
-	}
-	// printf("Wrapper: seek from %d to %zd\n", r, s->pos);
-	return 0;
+  statefile_desc_t *s = (statefile_desc_t *)stream;
+  if (!s) return -1;
+  if (whence == SEEK_SET) {
+    s->pos = (size_t)offset;
+  } else if (whence == SEEK_CUR) {
+    s->pos = (size_t)((long)s->pos + offset);
+  } else if (whence == SEEK_END) {
+    s->pos = (size_t)((long)s_ram_state_len + offset);
+  }
+  return 0;
 }

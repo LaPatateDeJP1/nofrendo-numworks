@@ -104,6 +104,8 @@ PORT_SRCS = [
     "src/pause_menu.c",
     "src/rom_catalog.c",
     "src/osd.c",
+    "src/i18n.c",
+    "src/settings.c",
     "src/statefile_wrapper.c",
     "src/storage.c",
     "src/stubs.c",

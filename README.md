@@ -14,19 +14,36 @@ It introduces an **interactive Multi-ROM launcher**, an **in-game OSD Pause menu
 
 ## 🌟 Key Features
 
+- **Instant In-RAM Save States**:
+  - Save and load your game progress at any point without restarting!
+  - 64 KB in-RAM snapshot buffer storing CPU, PPU, RAM, and cartridge mapper state.
+  - Safe, instantaneous execution with visual on-screen confirmation toasts (*"State Saved!"*, *"State Restored!"*).
+
+- **Bilingual UI (English & French)**:
+  - Full localization in **English** (default) and **Français**.
+  - Instant on-the-fly language toggle: press **`Shift`** in the game catalog or change it in the OSD Pause menu.
+
+- **Hardware Brightness & Screen Controls**:
+  - Adjust LCD backlight brightness across 4 levels (25%, 50%, 75%, 100%) to save battery life.
+  - Optional real-time **FPS Counter** overlay to monitor emulation performance.
+
+- **Modern Redesigned UI & UX**:
+  - Sleek modern dark slate interface with cyan accent highlights.
+  - Card-based ROM browser displaying total game count, language tag, cartridge mapper, and PRG/CHR ROM sizes.
+  - Scrollable in-game pause modal with smooth indicators and feedback toasts.
+
 - **Interactive Multi-ROM Launcher**:
   - Fullscreen 320×240 catalog with pagination, smooth cursor navigation, and circular scrolling.
   - Automatic ROM metadata extraction (iNES Mapper number, mapper name, PRG/CHR ROM sizes, file size in KB).
-  - Clean title truncation and responsive layout.
   - Continuous game loop: exiting a game returns directly to the catalog menu.
 
 - **Zero-RAM Waste (Flash XIP)**:
   - All embedded ROMs are stored directly in the `.rodata` section of external OctoSPI flash memory with 32-bit alignment.
-  - Internal SRAM footprint (`.data` + `.bss`) is capped at only **~16.8 KB** (out of 1 MB available), regardless of the number or size of games included!
+  - Total RAM footprint (`.data` + `.bss`) is only **~82 KB** (including the 64 KB save state buffer) out of 1024 KB available!
 
 - **In-Game OSD Pause Menu**:
   - Triggered at any time by pressing **`Toolbox`**, **`Var`**, or **`Shift` + `Back`**.
-  - On-screen popup overlay allowing you to resume, toggle Fast-Forward, toggle Aspect Ratio, cycle color palettes, perform a soft reset, or exit to the ROM catalog.
+  - Manage save states, emulation speed, display scaling, color palettes, screen brightness, FPS display, and language.
 
 - **Display Engine & Video Scaling**:
   - **4:3 Original Mode (256×240)**: Centered with stylized NES-themed retro side borders.
@@ -68,6 +85,7 @@ It introduces an **interactive Multi-ROM launcher**, an **in-game OSD Pause menu
 | :--- | :--- |
 | **Up** / **Down** | Move selection cursor row by row |
 | **Left** / **Right** | Previous page / Next page |
+| **Shift** | Toggle interface language (English / Français) |
 | **OK** or **EXE** | Launch selected game |
 | **Home** | Exit to NumWorks OS (Epsilon) |
 
