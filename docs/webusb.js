@@ -51,7 +51,7 @@ export class NumWorksDevice {
     this.alternateSetting = 0;
     this.transferSize = 2048;
     this.isConnected = false;
-    this.flashStart = 0x90581000; // Adresse par défaut external apps N0120
+    this.flashStart = 0x90570000; // Adresse exacte external apps N0120 (Epsilon)
     this.deviceModel = "NumWorks (Détection...)";
   }
 
