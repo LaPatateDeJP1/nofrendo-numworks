@@ -244,7 +244,7 @@ typedef struct _SnssBaseBlock
 } SnssBaseBlock;
 
 #define VRAM_8K 0x2000
-#define VRAM_16K 0x4000
+#define VRAM_16K 0x2000
 typedef struct _SnssVramBlock
 {
    unsigned short vramSize;
@@ -318,13 +318,22 @@ typedef struct _SNSS_FILE
    FILE *fp;
    SNSS_OPEN_MODE mode;
    SnssFileHeader headerBlock;
-   SnssBaseBlock baseBlock;
-   SnssVramBlock vramBlock;
-   SnssSramBlock sramBlock;
-   SnssMapperBlock mapperBlock;
-   SnssControllersBlock contBlock;
-   SnssSoundBlock soundBlock;
+   union {
+      SnssBaseBlock baseBlock;
+      SnssVramBlock vramBlock;
+      SnssSramBlock sramBlock;
+      SnssMapperBlock mapperBlock;
+      SnssControllersBlock contBlock;
+      SnssSoundBlock soundBlock;
+   } b;
 } SNSS_FILE;
+
+#define baseBlock b.baseBlock
+#define vramBlock b.vramBlock
+#define sramBlock b.sramBlock
+#define mapperBlock b.mapperBlock
+#define contBlock b.contBlock
+#define soundBlock b.soundBlock
 
 #ifdef __cplusplus
 extern "C" {

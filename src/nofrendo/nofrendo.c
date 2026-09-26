@@ -251,6 +251,9 @@ int main_loop(const char *filename, system_t type)
          return 1;
    }
 
+   main_eject();
+   shutdown_everything();
+
    return 0;
 }
 

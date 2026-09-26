@@ -7,26 +7,27 @@
 #include <stdio.h>
 #include <string.h>
 
-#define WIN_W              272
-#define WIN_H              172
+#define WIN_W              240
+#define WIN_H              216
 #define WIN_X              ((EADK_SCREEN_WIDTH - WIN_W) / 2)
 #define WIN_Y              ((EADK_SCREEN_HEIGHT - WIN_H) / 2)
 
-#define COLOR_BORDER       ((eadk_color_t)0x051F)
-#define COLOR_BG           ((eadk_color_t)0x08A5)
-#define COLOR_HEADER_BG    ((eadk_color_t)0x112C)
-#define COLOR_SEL_BG       ((eadk_color_t)0x1B38)
+#define COLOR_BORDER       ((eadk_color_t)0x041D)
+#define COLOR_BG           ((eadk_color_t)0x10C6)
+#define COLOR_HEADER_BG    ((eadk_color_t)0x1927)
+#define COLOR_SEL_BG       ((eadk_color_t)0x235F)
 #define COLOR_SEL_BAR      ((eadk_color_t)0x067F)
-#define COLOR_MUTED        ((eadk_color_t)0x8C92)
-#define COLOR_ACCENT       ((eadk_color_t)0x07FF)
-#define COLOR_SUCCESS_BG   ((eadk_color_t)0x1404)
-#define COLOR_ALERT_BG     ((eadk_color_t)0x8000)
 
-#define VISIBLE_ITEMS      7
-#define TOTAL_ITEMS        10
+#define COLOR_TEXT_WHITE   ((eadk_color_t)0xFFFF)
+#define COLOR_TEXT_SILVER  ((eadk_color_t)0xEF5D)
+#define COLOR_TEXT_YELLOW  ((eadk_color_t)0xFFE0)
+#define COLOR_TEXT_CYAN    ((eadk_color_t)0x56BF)
+#define COLOR_SUCCESS_BG   ((eadk_color_t)0x05E5)
+#define COLOR_ALERT_BG     ((eadk_color_t)0xF800)
 
 enum {
   ITEM_RESUME = 0,
+  ITEM_SLOT,
   ITEM_SAVE_STATE,
   ITEM_LOAD_STATE,
   ITEM_SPEED,
@@ -35,7 +36,8 @@ enum {
   ITEM_FPS,
   ITEM_LANGUAGE,
   ITEM_RESET,
-  ITEM_EXIT
+  ITEM_EXIT,
+  TOTAL_ITEMS
 };
 
 static void wait_for_keys_released(void) {
@@ -44,26 +46,49 @@ static void wait_for_keys_released(void) {
   }
 }
 
+static const char *get_palette_name_localized(PaletteMode mode, bool is_fr) {
+  switch (mode) {
+    case PALETTE_STANDARD:
+      return "NES Standard";
+    case PALETTE_SMOOTH:
+      return is_fr ? "CRT Doux" : "CRT Smooth";
+    case PALETTE_VIVID:
+      return is_fr ? "Sony Eclatant" : "Sony Vivid";
+    case PALETTE_GAMEBOY:
+      return "Game Boy";
+    case PALETTE_NOIR_ET_BLANC:
+      return is_fr ? "Noir & Blanc" : "Black & White";
+    default:
+      return "Standard";
+  }
+}
+
 static void show_toast(const char *msg, bool is_success) {
-  uint16_t toast_w = 210;
+  uint16_t toast_w = 204;
   uint16_t toast_h = 24;
   uint16_t toast_x = (EADK_SCREEN_WIDTH - toast_w) / 2;
-  uint16_t toast_y = WIN_Y + WIN_H - 32;
+  uint16_t toast_y = WIN_Y + 90;
 
   eadk_color_t bg = is_success ? COLOR_SUCCESS_BG : COLOR_ALERT_BG;
   eadk_display_push_rect_uniform((eadk_rect_t){toast_x, toast_y, toast_w, toast_h}, bg);
-  eadk_display_push_rect_uniform((eadk_rect_t){toast_x, toast_y, toast_w, 1}, eadk_color_white);
-  eadk_display_push_rect_uniform((eadk_rect_t){toast_x, toast_y + toast_h - 1, toast_w, 1}, eadk_color_white);
+  eadk_display_push_rect_uniform((eadk_rect_t){toast_x, toast_y, toast_w, 1}, COLOR_TEXT_WHITE);
+  eadk_display_push_rect_uniform((eadk_rect_t){toast_x, toast_y + toast_h - 1, toast_w, 1}, COLOR_TEXT_WHITE);
 
-  eadk_display_draw_string(msg, (eadk_point_t){toast_x + 10, toast_y + 6}, false, eadk_color_white, bg);
+  eadk_display_draw_string(msg, (eadk_point_t){toast_x + 8, toast_y + 6}, false, COLOR_TEXT_WHITE, bg);
   eadk_timing_msleep(600);
+}
+
+static void cleanup_pause_screen(void) {
+  eadk_display_push_rect_uniform((eadk_rect_t){WIN_X, WIN_Y, WIN_W, WIN_H}, (eadk_color_t)0x0000);
+  if (display_get_scale_mode() == VIDEO_SCALE_4_3) {
+    display_draw_bezels();
+  }
 }
 
 PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
   wait_for_keys_released();
 
   int selected = 0;
-  int top_index = 0;
   bool local_ff = fast_forward ? *fast_forward : false;
   bool needs_redraw = true;
 
@@ -71,103 +96,100 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
   uint32_t repeat_counter = 0;
 
   while (1) {
+    bool is_fr = (i18n_get_language() == LANG_FR);
+
     if (needs_redraw) {
       eadk_display_push_rect_uniform((eadk_rect_t){WIN_X, WIN_Y, WIN_W, WIN_H}, COLOR_BORDER);
       eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 2, WIN_Y + 2, WIN_W - 4, WIN_H - 4}, COLOR_BG);
-      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 2, WIN_Y + 2, WIN_W - 4, 22}, COLOR_HEADER_BG);
-      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 2, WIN_Y + 23, WIN_W - 4, 1}, COLOR_BORDER);
+      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 2, WIN_Y + 2, WIN_W - 4, 18}, COLOR_HEADER_BG);
+      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 2, WIN_Y + 20, WIN_W - 4, 1}, COLOR_BORDER);
 
       char title_buf[32];
-      snprintf(title_buf, sizeof(title_buf), "%s: %.10s", i18n_str(STR_PAUSE_TITLE), game_title ? game_title : "NES");
-      eadk_display_draw_string(title_buf, (eadk_point_t){WIN_X + 8, WIN_Y + 6}, false, eadk_color_white, COLOR_HEADER_BG);
+      snprintf(title_buf, sizeof(title_buf), "%s: %.10s", is_fr ? "PAUSE" : "PAUSE", game_title ? game_title : "NES");
+      eadk_display_draw_string(title_buf, (eadk_point_t){WIN_X + 8, WIN_Y + 4}, false, COLOR_TEXT_YELLOW, COLOR_HEADER_BG);
 
-      const char *lang_badge = (i18n_get_language() == LANG_FR) ? "FR" : "EN";
-      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + WIN_W - 32, WIN_Y + 5, 24, 14}, COLOR_SEL_BG);
-      eadk_display_draw_string(lang_badge, (eadk_point_t){WIN_X + WIN_W - 28, WIN_Y + 6}, false, eadk_color_white, COLOR_SEL_BG);
+      const char *lang_badge = is_fr ? "[FR]" : "[EN]";
+      eadk_display_draw_string(lang_badge, (eadk_point_t){WIN_X + WIN_W - 38, WIN_Y + 4}, false, COLOR_TEXT_CYAN, COLOR_HEADER_BG);
 
-      for (int i = 0; i < VISIBLE_ITEMS; i++) {
-        int item_idx = top_index + i;
-        if (item_idx >= TOTAL_ITEMS) break;
+      int active_slot = ram_state_get_slot();
 
-        uint16_t row_y = WIN_Y + 26 + (i * 18);
-        bool is_sel = (item_idx == selected);
+      for (int i = 0; i < TOTAL_ITEMS; i++) {
+        uint16_t row_y = WIN_Y + 23 + (i * 15);
+        bool is_sel = (i == selected);
         eadk_color_t row_bg = is_sel ? COLOR_SEL_BG : COLOR_BG;
-        eadk_color_t text_col = is_sel ? eadk_color_white : ((eadk_color_t)0xD6BA);
+        eadk_color_t text_col = is_sel ? COLOR_TEXT_WHITE : COLOR_TEXT_SILVER;
 
-        eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 4, row_y, WIN_W - 8, 17}, row_bg);
+        eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 3, row_y, WIN_W - 6, 14}, row_bg);
         if (is_sel) {
-          eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 4, row_y, 3, 17}, COLOR_SEL_BAR);
+          eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 3, row_y, 3, 14}, COLOR_SEL_BAR);
         }
 
-        char label[44];
-        switch (item_idx) {
+        char label[36];
+        switch (i) {
           case ITEM_RESUME:
-            snprintf(label, sizeof(label), "%s", i18n_str(STR_PAUSE_RESUME));
+            snprintf(label, sizeof(label), "%s", is_fr ? "Reprendre la partie" : "Resume Game");
+            break;
+          case ITEM_SLOT:
+            snprintf(label, sizeof(label), "%s: < Slot %d >", is_fr ? "Emplacement" : "Save Slot", active_slot + 1);
             break;
           case ITEM_SAVE_STATE:
-            snprintf(label, sizeof(label), "%s", i18n_str(STR_PAUSE_SAVE_STATE));
+            snprintf(label, sizeof(label), "%s (Slot %d)", is_fr ? "Sauvegarder" : "Save State", active_slot + 1);
             break;
           case ITEM_LOAD_STATE:
-            snprintf(label, sizeof(label), "%s [%s]",
-                     i18n_str(STR_PAUSE_LOAD_STATE),
-                     ram_state_exists() ? i18n_str(STR_READY) : i18n_str(STR_EMPTY));
+            if (ram_state_exists_slot(active_slot)) {
+              snprintf(label, sizeof(label), "%s (Slot %d) [%s]", is_fr ? "Charger" : "Load State", active_slot + 1, is_fr ? "Dispo" : "Ready");
+            } else {
+              snprintf(label, sizeof(label), "%s (Slot %d) [%s]", is_fr ? "Charger" : "Load State", active_slot + 1, is_fr ? "Vide" : "Empty");
+            }
             break;
           case ITEM_SPEED:
             snprintf(label, sizeof(label), "%s: %s",
-                     i18n_str(STR_PAUSE_SPEED),
-                     local_ff ? "2x Fast" : "1x Normal");
+                     is_fr ? "Vitesse" : "Speed",
+                     local_ff ? (is_fr ? "Rapide (2x)" : "Fast (2x)") : (is_fr ? "Normale (1x)" : "Normal (1x)"));
             break;
           case ITEM_SCALE:
             snprintf(label, sizeof(label), "%s: %s",
-                     i18n_str(STR_PAUSE_SCALE),
+                     is_fr ? "Format" : "Display",
                      (display_get_scale_mode() == VIDEO_SCALE_FULLSCREEN)
-                       ? i18n_str(STR_SCALE_FULL)
-                       : i18n_str(STR_SCALE_4_3));
+                       ? (is_fr ? "Plein ecran" : "Fullscreen")
+                       : "4:3 Standard");
             break;
           case ITEM_PALETTE:
             snprintf(label, sizeof(label), "%s: %s",
-                     i18n_str(STR_PAUSE_PALETTE),
-                     display_get_palette_mode_name(display_get_palette_mode()));
+                     is_fr ? "Palette" : "Palette",
+                     get_palette_name_localized(display_get_palette_mode(), is_fr));
             break;
           case ITEM_FPS:
             snprintf(label, sizeof(label), "%s: %s",
-                     i18n_str(STR_PAUSE_FPS),
-                     display_get_show_fps() ? i18n_str(STR_ON) : i18n_str(STR_OFF));
+                     is_fr ? "Compteur FPS" : "Show FPS",
+                     display_get_show_fps() ? (is_fr ? "OUI" : "ON") : (is_fr ? "NON" : "OFF"));
             break;
           case ITEM_LANGUAGE:
             snprintf(label, sizeof(label), "%s: %s",
-                     i18n_str(STR_PAUSE_LANGUAGE),
-                     i18n_get_lang_name(i18n_get_language()));
+                     is_fr ? "Langue" : "Language",
+                     is_fr ? "Francais" : "English");
             break;
           case ITEM_RESET:
-            snprintf(label, sizeof(label), "%s", i18n_str(STR_PAUSE_RESET));
+            snprintf(label, sizeof(label), "%s", is_fr ? "Redemarrer le jeu" : "Reset Game");
             break;
           case ITEM_EXIT:
-            snprintf(label, sizeof(label), "%s", i18n_str(STR_PAUSE_EXIT));
+            snprintf(label, sizeof(label), "%s", is_fr ? "Quitter vers menu" : "Quit to Menu");
             break;
           default:
             snprintf(label, sizeof(label), "Option");
             break;
         }
 
-        char item_str[48];
+        char item_str[40];
         snprintf(item_str, sizeof(item_str), "%s %s", is_sel ? ">" : " ", label);
-        eadk_display_draw_string(item_str, (eadk_point_t){WIN_X + 10, row_y + 2}, false, text_col, row_bg);
+        eadk_display_draw_string(item_str, (eadk_point_t){WIN_X + 6, row_y + 1}, false, text_col, row_bg);
       }
 
-      if (top_index > 0) {
-        eadk_display_draw_string("^", (eadk_point_t){WIN_X + WIN_W - 14, WIN_Y + 28}, false, COLOR_ACCENT, COLOR_BG);
-      }
-      if (top_index + VISIBLE_ITEMS < TOTAL_ITEMS) {
-        eadk_display_draw_string("v", (eadk_point_t){WIN_X + WIN_W - 14, WIN_Y + WIN_H - 24}, false, COLOR_ACCENT, COLOR_BG);
-      }
-
-      char hint_buf[40];
-      snprintf(hint_buf, sizeof(hint_buf), "%s: OK  |  %s: Back",
-               (selected == ITEM_RESUME || selected == ITEM_EXIT || selected == ITEM_RESET || selected == ITEM_SAVE_STATE || selected == ITEM_LOAD_STATE) ? "Select" : "Toggle",
-               "Resume");
-      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 4, WIN_Y + WIN_H - 16, WIN_W - 8, 14}, COLOR_HEADER_BG);
-      eadk_display_draw_string(hint_buf, (eadk_point_t){WIN_X + 12, WIN_Y + WIN_H - 14}, false, COLOR_MUTED, COLOR_HEADER_BG);
+      char hint_buf[36];
+      snprintf(hint_buf, sizeof(hint_buf), "%s",
+               is_fr ? "[OK] Valider   [Back] Reprendre" : "[OK] Select    [Back] Resume");
+      eadk_display_push_rect_uniform((eadk_rect_t){WIN_X + 3, WIN_Y + WIN_H - 17, WIN_W - 6, 15}, COLOR_HEADER_BG);
+      eadk_display_draw_string(hint_buf, (eadk_point_t){WIN_X + 10, WIN_Y + WIN_H - 16}, false, COLOR_TEXT_YELLOW, COLOR_HEADER_BG);
 
       needs_redraw = false;
     }
@@ -177,6 +199,7 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
     if (eadk_keyboard_key_down(cur_state, eadk_key_toolbox)) {
       wait_for_keys_released();
       if (fast_forward) *fast_forward = local_ff;
+      cleanup_pause_screen();
       return PAUSE_ACTION_RESUME;
     }
 
@@ -185,6 +208,7 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
     if (key_back) {
       wait_for_keys_released();
       if (fast_forward) *fast_forward = local_ff;
+      cleanup_pause_screen();
       return PAUSE_ACTION_RESUME;
     }
 
@@ -212,19 +236,9 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
 
     if (up_pressed) {
       selected = (selected > 0) ? (selected - 1) : (TOTAL_ITEMS - 1);
-      if (selected < top_index) {
-        top_index = selected;
-      } else if (selected >= top_index + VISIBLE_ITEMS) {
-        top_index = selected - VISIBLE_ITEMS + 1;
-      }
       needs_redraw = true;
     } else if (down_pressed) {
       selected = (selected + 1) % TOTAL_ITEMS;
-      if (selected >= top_index + VISIBLE_ITEMS) {
-        top_index = selected - VISIBLE_ITEMS + 1;
-      } else if (selected < top_index) {
-        top_index = selected;
-      }
       needs_redraw = true;
     }
 
@@ -234,25 +248,54 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
           if (key_action) {
             wait_for_keys_released();
             if (fast_forward) *fast_forward = local_ff;
+            cleanup_pause_screen();
             return PAUSE_ACTION_RESUME;
           }
           break;
 
+        case ITEM_SLOT: {
+          int s = ram_state_get_slot();
+          if (key_left) {
+            s = (s > 0) ? (s - 1) : (NUM_SAVE_SLOTS - 1);
+          } else {
+            s = (s + 1) % NUM_SAVE_SLOTS;
+          }
+          ram_state_set_slot(s);
+          needs_redraw = true;
+          break;
+        }
+
         case ITEM_SAVE_STATE:
           if (key_action) {
             int ret = ram_state_save();
-            show_toast((ret == 0) ? i18n_str(STR_STATE_SAVED) : "Save Error!", ret == 0);
+            char msg[32];
+            int cur_slot = ram_state_get_slot() + 1;
+            if (ret == 0) {
+              snprintf(msg, sizeof(msg), is_fr ? "Sauvegarde Slot %d OK !" : "Slot %d Saved to RAM!", cur_slot);
+            } else {
+              snprintf(msg, sizeof(msg), is_fr ? "Erreur Slot %d !" : "Slot %d Save Error!", cur_slot);
+            }
+            show_toast(msg, ret == 0);
             needs_redraw = true;
           }
           break;
 
         case ITEM_LOAD_STATE:
           if (key_action) {
+            int cur_slot = ram_state_get_slot() + 1;
             if (ram_state_exists()) {
               int ret = ram_state_load();
-              show_toast((ret == 0) ? i18n_str(STR_STATE_LOADED) : "Load Error!", ret == 0);
+              char msg[32];
+              if (ret == 0) {
+                snprintf(msg, sizeof(msg), is_fr ? "Restauration Slot %d OK !" : "Slot %d Restored!", cur_slot);
+              } else {
+                snprintf(msg, sizeof(msg), is_fr ? "Erreur de chargement !" : "Load Error!");
+              }
+              show_toast(msg, ret == 0);
             } else {
-              show_toast(i18n_str(STR_STATE_EMPTY), false);
+              char msg[32];
+              snprintf(msg, sizeof(msg), is_fr ? "Slot %d vide !" : "Slot %d is Empty!", cur_slot);
+              show_toast(msg, false);
             }
             needs_redraw = true;
           }
@@ -302,6 +345,7 @@ PauseAction pause_menu_show(const char *game_title, bool *fast_forward) {
           if (key_action) {
             wait_for_keys_released();
             if (fast_forward) *fast_forward = local_ff;
+            cleanup_pause_screen();
             return PAUSE_ACTION_RESET;
           }
           break;

@@ -1,6 +1,5 @@
 #include "menu.h"
 #include "game_entry.h"
-#include "settings.h"
 #include "i18n.h"
 #include <eadk.h>
 #include <stdio.h>
@@ -10,23 +9,26 @@
 #define SCREEN_H           240
 
 #define ITEMS_PER_PAGE     8
-#define ROW_HEIGHT         19
-#define LIST_START_Y       28
-#define HEADER_HEIGHT      26
-#define FOOTER_HEIGHT      48
+#define ROW_HEIGHT         20
+#define LIST_START_Y       32
+#define HEADER_HEIGHT      30
+#define FOOTER_HEIGHT      46
 #define FOOTER_Y           (SCREEN_H - FOOTER_HEIGHT)
 
-#define MAX_TITLE_CHARS    24
+#define MAX_TITLE_CHARS    26
+#define MAX_LINE_BUF       48
 
-#define COLOR_BG           ((eadk_color_t)0x08A5)
-#define COLOR_HEADER_BG    ((eadk_color_t)0x112C)
-#define COLOR_FOOTER_BG    ((eadk_color_t)0x0C88)
-#define COLOR_ACCENT       ((eadk_color_t)0x067F)
-#define COLOR_SEL_BG       ((eadk_color_t)0x1B38)
-#define COLOR_SEL_BAR      ((eadk_color_t)0x07FF)
-#define COLOR_TEXT_MUTED   ((eadk_color_t)0x8C92)
-#define COLOR_TEXT_DIM     ((eadk_color_t)0xB5B7)
-#define COLOR_BADGE_BG     ((eadk_color_t)0x18E5)
+#define COLOR_BG           ((eadk_color_t)0x10A2)
+#define COLOR_HEADER_BG    ((eadk_color_t)0x1927)
+#define COLOR_FOOTER_BG    ((eadk_color_t)0x1927)
+#define COLOR_ACCENT       ((eadk_color_t)0x04FF)
+#define COLOR_SEL_BG       ((eadk_color_t)0x2378)
+#define COLOR_SEL_BORDER   ((eadk_color_t)0x5D3F)
+
+#define COLOR_WHITE        ((eadk_color_t)0xFFFF)
+#define COLOR_YELLOW       ((eadk_color_t)0xFFE0)
+#define COLOR_CYAN         ((eadk_color_t)0x07FF)
+#define COLOR_LIGHT_GRAY   ((eadk_color_t)0xE71C)
 
 static void wait_for_all_keys_released(void) {
   while (eadk_keyboard_scan() != 0) {
@@ -41,10 +43,7 @@ static const char *get_mapper_name(uint8_t mapper) {
     case 2: return "UNROM";
     case 3: return "CNROM";
     case 4: return "MMC3";
-    case 5: return "MMC5";
     case 7: return "AOROM";
-    case 9: return "MMC2";
-    case 10: return "MMC4";
     case 66: return "GxROM";
     default: return "NES";
   }
@@ -75,39 +74,30 @@ static void draw_header(size_t current_index, size_t total_count) {
       (eadk_rect_t){0, 0, SCREEN_W, HEADER_HEIGHT},
       COLOR_HEADER_BG
   );
+
   eadk_display_push_rect_uniform(
       (eadk_rect_t){0, HEADER_HEIGHT - 1, SCREEN_W, 1},
       COLOR_ACCENT
   );
 
-  char title_buf[32];
-  snprintf(title_buf, sizeof(title_buf), "%s", i18n_str(STR_APP_TITLE));
+  const char *title = (i18n_get_language() == LANG_FR) ? "NOFRENDO - CATALOGUE NES" : "NOFRENDO - NES CATALOG";
   eadk_display_draw_string(
-      title_buf,
-      (eadk_point_t){8, 7},
+      title,
+      (eadk_point_t){12, 8},
       false,
-      eadk_color_white,
+      COLOR_WHITE,
       COLOR_HEADER_BG
   );
 
-  char count_buf[24];
-  snprintf(count_buf, sizeof(count_buf), "[%u/%u Games]", (unsigned)(current_index + 1), (unsigned)total_count);
+  char counter_buf[24];
+  const char *lang_str = (i18n_get_language() == LANG_FR) ? "FR" : "EN";
+  snprintf(counter_buf, sizeof(counter_buf), "[%s] [%u/%u]", lang_str, (unsigned)(current_index + 1), (unsigned)total_count);
   eadk_display_draw_string(
-      count_buf,
-      (eadk_point_t){SCREEN_W - 130, 7},
+      counter_buf,
+      (eadk_point_t){SCREEN_W - 95, 8},
       false,
-      COLOR_TEXT_MUTED,
+      COLOR_YELLOW,
       COLOR_HEADER_BG
-  );
-
-  const char *lang_tag = (i18n_get_language() == LANG_FR) ? "FR" : "EN";
-  eadk_display_push_rect_uniform((eadk_rect_t){SCREEN_W - 32, 5, 24, 15}, COLOR_BADGE_BG);
-  eadk_display_draw_string(
-      lang_tag,
-      (eadk_point_t){SCREEN_W - 28, 7},
-      false,
-      eadk_color_white,
-      COLOR_BADGE_BG
   );
 }
 
@@ -116,108 +106,100 @@ static void draw_footer(const GameEntry *current_game, bool can_scroll_up, bool 
       (eadk_rect_t){0, FOOTER_Y, SCREEN_W, FOOTER_HEIGHT},
       COLOR_FOOTER_BG
   );
+
   eadk_display_push_rect_uniform(
       (eadk_rect_t){0, FOOTER_Y, SCREEN_W, 1},
       COLOR_ACCENT
   );
 
   if (current_game) {
-    char line1[64];
-    snprintf(line1, sizeof(line1), "%s %s (Mapper %u)",
-             i18n_str(STR_CART_INFO),
+    char meta_buf[64];
+    snprintf(meta_buf, sizeof(meta_buf), "Map:%u (%s) | P:%uK C:%uK | %u Ko",
+             current_game->mapper,
              get_mapper_name(current_game->mapper),
-             current_game->mapper);
-    eadk_display_draw_string(
-        line1,
-        (eadk_point_t){8, FOOTER_Y + 5},
-        false,
-        eadk_color_white,
-        COLOR_FOOTER_BG
-    );
-
-    char line2[64];
-    snprintf(line2, sizeof(line2), "PRG:%uK  CHR:%uK  %s:%uK",
-             (unsigned)(current_game->prg_size_kb),
-             (unsigned)(current_game->chr_size_kb),
-             i18n_str(STR_SIZE),
+             current_game->prg_size_kb,
+             current_game->chr_size_kb,
              (unsigned)(current_game->rom_size / 1024));
+
     eadk_display_draw_string(
-        line2,
-        (eadk_point_t){8, FOOTER_Y + 19},
+        meta_buf,
+        (eadk_point_t){10, FOOTER_Y + 5},
         false,
-        COLOR_TEXT_DIM,
+        COLOR_WHITE,
         COLOR_FOOTER_BG
     );
   }
 
-  char hint[64];
-  snprintf(hint, sizeof(hint), "%s  %s  %s  %s",
-           i18n_str(STR_HINT_PLAY),
-           i18n_str(STR_HINT_PAGE),
-           i18n_str(STR_HINT_LANG),
-           i18n_str(STR_HINT_EXIT));
+  if (can_scroll_up) {
+    eadk_display_draw_string("^", (eadk_point_t){8, FOOTER_Y + 24}, false, COLOR_CYAN, COLOR_FOOTER_BG);
+  }
+  if (can_scroll_down) {
+    eadk_display_draw_string("v", (eadk_point_t){18, FOOTER_Y + 24}, false, COLOR_CYAN, COLOR_FOOTER_BG);
+  }
+
+  const char *hint_str = (i18n_get_language() == LANG_FR)
+      ? "[OK] Lancer  [Shift] Lang  [Home] Quitter"
+      : "[OK] Play    [Shift] Lang  [Home] Exit";
+
   eadk_display_draw_string(
-      hint,
-      (eadk_point_t){8, FOOTER_Y + 34},
+      hint_str,
+      (eadk_point_t){30, FOOTER_Y + 24},
       false,
-      COLOR_TEXT_MUTED,
+      COLOR_YELLOW,
       COLOR_FOOTER_BG
   );
 }
 
-static void draw_game_list(const GameEntry *games, size_t count, size_t selected, size_t page_start) {
+static void draw_game_list(const GameEntry *games, size_t count, size_t selected, size_t top_index) {
   for (size_t i = 0; i < ITEMS_PER_PAGE; i++) {
-    size_t index = page_start + i;
+    size_t game_idx = top_index + i;
     uint16_t row_y = LIST_START_Y + (i * ROW_HEIGHT);
 
-    if (index < count) {
-      bool is_selected = (index == selected);
+    if (game_idx < count) {
+      bool is_selected = (game_idx == selected);
       eadk_color_t row_bg = is_selected ? COLOR_SEL_BG : COLOR_BG;
-      eadk_color_t text_col = is_selected ? eadk_color_white : COLOR_TEXT_DIM;
+      eadk_color_t text_col = is_selected ? COLOR_WHITE : COLOR_LIGHT_GRAY;
 
       eadk_display_push_rect_uniform(
           (eadk_rect_t){0, row_y, SCREEN_W, ROW_HEIGHT},
           COLOR_BG
       );
       eadk_display_push_rect_uniform(
-          (eadk_rect_t){4, row_y + 1, SCREEN_W - 8, ROW_HEIGHT - 2},
+          (eadk_rect_t){6, row_y + 1, SCREEN_W - 12, ROW_HEIGHT - 2},
           row_bg
       );
 
       if (is_selected) {
         eadk_display_push_rect_uniform(
-            (eadk_rect_t){4, row_y + 1, 3, ROW_HEIGHT - 2},
-            COLOR_SEL_BAR
+            (eadk_rect_t){6, row_y + 1, 3, ROW_HEIGHT - 2},
+            COLOR_CYAN
         );
       }
 
-      char row_text[64];
-      char short_title[MAX_TITLE_CHARS + 1];
-      truncate_title(short_title, games[index].title, MAX_TITLE_CHARS);
-      snprintf(row_text, sizeof(row_text), "%s %u. %s",
+      char clean_title[MAX_TITLE_CHARS + 4];
+      truncate_title(clean_title, games[game_idx].title, MAX_TITLE_CHARS);
+
+      char line_str[MAX_LINE_BUF];
+      snprintf(line_str, sizeof(line_str), "%s %2u. %s",
                is_selected ? ">" : " ",
-               (unsigned)(index + 1),
-               short_title);
+               (unsigned)(game_idx + 1),
+               clean_title);
 
       eadk_display_draw_string(
-          row_text,
-          (eadk_point_t){8, row_y + 3},
+          line_str,
+          (eadk_point_t){12, row_y + 3},
           false,
           text_col,
           row_bg
       );
 
-      char badge[16];
-      if (is_selected) {
-        snprintf(badge, sizeof(badge), "[%s]", get_mapper_name(games[index].mapper));
-      } else {
-        snprintf(badge, sizeof(badge), "%uK", (unsigned)(games[index].rom_size / 1024));
-      }
+      char size_str[16];
+      snprintf(size_str, sizeof(size_str), "%u Ko", (unsigned)(games[game_idx].rom_size / 1024));
       eadk_display_draw_string(
-          badge,
-          (eadk_point_t){SCREEN_W - 58, row_y + 3},
+          size_str,
+          (eadk_point_t){SCREEN_W - 65, row_y + 3},
           false,
-          is_selected ? COLOR_SEL_BAR : COLOR_TEXT_MUTED,
+          is_selected ? COLOR_YELLOW : COLOR_CYAN,
           row_bg
       );
     } else {
@@ -234,14 +216,15 @@ const GameEntry *menu_select_game(const GameEntry *games, size_t count) {
     return NULL;
   }
 
-  wait_for_all_keys_released();
+  if (count == 1) {
+    return &games[0];
+  }
 
   size_t selected = 0;
-  size_t prev_selected = 0;
-  size_t page_start = 0;
-  size_t prev_page_start = 0;
+  size_t top_index = 0;
+  bool needs_full_redraw = true;
 
-  bool full_redraw = true;
+  wait_for_all_keys_released();
 
   eadk_display_push_rect_uniform(eadk_screen_rect, COLOR_BG);
 
@@ -249,24 +232,11 @@ const GameEntry *menu_select_game(const GameEntry *games, size_t count) {
   uint32_t repeat_counter = 0;
 
   while (1) {
-    if (full_redraw) {
+    if (needs_full_redraw) {
       draw_header(selected, count);
-      draw_game_list(games, count, selected, page_start);
-      draw_footer(&games[selected], page_start > 0, page_start + ITEMS_PER_PAGE < count);
-      full_redraw = false;
-      prev_selected = selected;
-      prev_page_start = page_start;
-    } else if (page_start != prev_page_start) {
-      draw_header(selected, count);
-      draw_game_list(games, count, selected, page_start);
-      draw_footer(&games[selected], page_start > 0, page_start + ITEMS_PER_PAGE < count);
-      prev_selected = selected;
-      prev_page_start = page_start;
-    } else if (selected != prev_selected) {
-      draw_header(selected, count);
-      draw_game_list(games, count, selected, page_start);
-      draw_footer(&games[selected], page_start > 0, page_start + ITEMS_PER_PAGE < count);
-      prev_selected = selected;
+      draw_game_list(games, count, selected, top_index);
+      draw_footer(&games[selected], top_index > 0, (top_index + ITEMS_PER_PAGE) < count);
+      needs_full_redraw = false;
     }
 
     eadk_keyboard_state_t cur_state = eadk_keyboard_scan();
@@ -277,7 +247,8 @@ const GameEntry *menu_select_game(const GameEntry *games, size_t count) {
       return &games[selected];
     }
 
-    if (eadk_keyboard_key_down(cur_state, eadk_key_home)) {
+    if (eadk_keyboard_key_down(cur_state, eadk_key_home) ||
+        eadk_keyboard_key_down(cur_state, eadk_key_back)) {
       wait_for_all_keys_released();
       return NULL;
     }
@@ -286,8 +257,7 @@ const GameEntry *menu_select_game(const GameEntry *games, size_t count) {
                      !eadk_keyboard_key_down(prev_state, eadk_key_shift);
     if (key_shift) {
       i18n_toggle_language();
-      g_settings.language = i18n_get_language();
-      full_redraw = true;
+      needs_full_redraw = true;
     }
 
     bool key_up = eadk_keyboard_key_down(cur_state, eadk_key_up);
@@ -295,55 +265,77 @@ const GameEntry *menu_select_game(const GameEntry *games, size_t count) {
     bool key_left = eadk_keyboard_key_down(cur_state, eadk_key_left);
     bool key_right = eadk_keyboard_key_down(cur_state, eadk_key_right);
 
-    bool up_pressed = key_up && (!eadk_keyboard_key_down(prev_state, eadk_key_up) ||
-                                 (repeat_counter > 15 && (repeat_counter % 4 == 0)));
-    bool down_pressed = key_down && (!eadk_keyboard_key_down(prev_state, eadk_key_down) ||
-                                     (repeat_counter > 15 && (repeat_counter % 4 == 0)));
+    bool trigger_up = false;
+    bool trigger_down = false;
+    bool trigger_page_up = false;
+    bool trigger_page_down = false;
 
-    bool left_pressed = key_left && !eadk_keyboard_key_down(prev_state, eadk_key_left);
-    bool right_pressed = key_right && !eadk_keyboard_key_down(prev_state, eadk_key_right);
-
-    if (key_up || key_down) {
-      repeat_counter++;
+    if (key_up || key_down || key_left || key_right) {
+      if (prev_state == 0) {
+        trigger_up = key_up;
+        trigger_down = key_down;
+        trigger_page_up = key_left;
+        trigger_page_down = key_right;
+        repeat_counter = 0;
+      } else {
+        repeat_counter++;
+        if (repeat_counter >= 12 && (repeat_counter % 4) == 0) {
+          trigger_up = key_up;
+          trigger_down = key_down;
+          trigger_page_up = key_left;
+          trigger_page_down = key_right;
+        }
+      }
     } else {
       repeat_counter = 0;
     }
 
-    if (up_pressed) {
-      if (selected == 0) {
-        selected = count - 1;
-        page_start = (selected / ITEMS_PER_PAGE) * ITEMS_PER_PAGE;
-      } else {
+    if (trigger_up) {
+      if (selected > 0) {
         selected--;
-        if (selected < page_start) {
-          page_start = (selected >= ITEMS_PER_PAGE) ? (selected - ITEMS_PER_PAGE + 1) : 0;
-          page_start = (page_start / ITEMS_PER_PAGE) * ITEMS_PER_PAGE;
-        }
-      }
-    } else if (down_pressed) {
-      if (selected + 1 >= count) {
-        selected = 0;
-        page_start = 0;
-      } else {
-        selected++;
-        if (selected >= page_start + ITEMS_PER_PAGE) {
-          page_start += ITEMS_PER_PAGE;
-        }
-      }
-    } else if (left_pressed) {
-      if (page_start >= ITEMS_PER_PAGE) {
-        page_start -= ITEMS_PER_PAGE;
-        selected = page_start;
-      } else {
-        selected = 0;
-      }
-    } else if (right_pressed) {
-      if (page_start + ITEMS_PER_PAGE < count) {
-        page_start += ITEMS_PER_PAGE;
-        selected = page_start;
       } else {
         selected = count - 1;
       }
+      if (selected < top_index) {
+        top_index = selected;
+      } else if (selected >= top_index + ITEMS_PER_PAGE) {
+        top_index = selected - ITEMS_PER_PAGE + 1;
+      }
+      needs_full_redraw = true;
+    } else if (trigger_down) {
+      if (selected + 1 < count) {
+        selected++;
+      } else {
+        selected = 0;
+      }
+      if (selected < top_index) {
+        top_index = selected;
+      } else if (selected >= top_index + ITEMS_PER_PAGE) {
+        top_index = selected - ITEMS_PER_PAGE + 1;
+      }
+      needs_full_redraw = true;
+    } else if (trigger_page_up) {
+      if (selected >= ITEMS_PER_PAGE) {
+        selected -= ITEMS_PER_PAGE;
+      } else {
+        selected = 0;
+      }
+      if (top_index >= ITEMS_PER_PAGE) {
+        top_index -= ITEMS_PER_PAGE;
+      } else {
+        top_index = 0;
+      }
+      needs_full_redraw = true;
+    } else if (trigger_page_down) {
+      if (selected + ITEMS_PER_PAGE < count) {
+        selected += ITEMS_PER_PAGE;
+      } else {
+        selected = count - 1;
+      }
+      if (top_index + ITEMS_PER_PAGE < count) {
+        top_index += ITEMS_PER_PAGE;
+      }
+      needs_full_redraw = true;
     }
 
     prev_state = cur_state;

@@ -40,6 +40,38 @@ bitmap_t *myBitmap;
 static VideoScaleMode s_scale_mode = VIDEO_SCALE_4_3;
 static PaletteMode s_palette_mode = PALETTE_STANDARD;
 
+static bool s_show_fps = false;
+static int s_current_fps = 60;
+static int s_displayed_fps = -1;
+static bool s_fps_dirty = true;
+static char s_fps_str[16] = "60 FPS";
+static int s_fps_str_len = 6;
+
+static const uint8_t s_font5x7[14][7] = {
+  { 0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110 }, // '0'
+  { 0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110 }, // '1'
+  { 0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111 }, // '2'
+  { 0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110 }, // '3'
+  { 0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010 }, // '4'
+  { 0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110 }, // '5'
+  { 0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110 }, // '6'
+  { 0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000 }, // '7'
+  { 0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110 }, // '8'
+  { 0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100 }, // '9'
+  { 0, 0, 0, 0, 0, 0, 0 },                                             // ' '
+  { 0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000 }, // 'F'
+  { 0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000 }, // 'P'
+  { 0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110 }  // 'S'
+};
+
+static inline int font5x7_index(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c == 'F' || c == 'f') return 11;
+  if (c == 'P' || c == 'p') return 12;
+  if (c == 'S' || c == 's') return 13;
+  return 10;
+}
+
 static rgb_t s_raw_palette[256];
 static uint16_t myPalette[256];
 static bool s_has_raw_palette = false;
@@ -107,6 +139,8 @@ static void apply_palette(void) {
 
 void display_set_scale_mode(VideoScaleMode mode) {
   s_scale_mode = mode;
+  s_fps_dirty = true;
+  s_displayed_fps = -1;
   if (s_scale_mode == VIDEO_SCALE_4_3) {
     display_draw_bezels();
   }
@@ -168,6 +202,9 @@ void display_draw_bezels(void) {
     eadk_display_draw_string("N", (eadk_point_t){300, 105}, false, (eadk_color_t)0x7BEF, (eadk_color_t)0x18C3);
     eadk_display_draw_string("E", (eadk_point_t){300, 117}, false, (eadk_color_t)0x7BEF, (eadk_color_t)0x18C3);
     eadk_display_draw_string("S", (eadk_point_t){300, 129}, false, (eadk_color_t)0x7BEF, (eadk_color_t)0x18C3);
+
+    s_fps_dirty = true;
+    s_displayed_fps = -1;
   }
 }
 
@@ -248,13 +285,16 @@ static void custom_blit(bitmap_t *bmp, int num_dirties, rect_t *dirty_rects) {
   }
 }
 
-static bool s_show_fps = false;
-static int s_current_fps = 60;
 static uint32_t s_frame_count = 0;
 static uint64_t s_last_fps_time = 0;
 
 void display_set_show_fps(bool show) {
   s_show_fps = show;
+  s_fps_dirty = true;
+  s_displayed_fps = -1;
+  if (!s_show_fps && s_scale_mode == VIDEO_SCALE_4_3) {
+    eadk_display_push_rect_uniform((eadk_rect_t){0, 0, 31, 35}, (eadk_color_t)0x18C3);
+  }
 }
 
 bool display_get_show_fps(void) {
@@ -285,6 +325,34 @@ void ppu_scanline_blit(uint8_t *bmp, int scanline, bool draw_flag) {
       line[5 * i + 3] = c2;
       line[5 * i + 4] = c3;
     }
+
+    if (s_show_fps && scanline >= 3 && scanline <= 11) {
+      int badge_w = s_fps_str_len * 6 + 4;
+      int end_x = 3 + badge_w;
+      if (scanline == 3 || scanline == 11) {
+        for (int x = 3; x <= end_x; x++) {
+          line[x] = 0x0000;
+        }
+      } else {
+        int row = scanline - 4;
+        line[3] = 0x0000;
+        line[end_x] = 0x0000;
+        for (int i = 0; i < s_fps_str_len; i++) {
+          int idx = font5x7_index(s_fps_str[i]);
+          uint8_t bits = s_font5x7[idx][row];
+          int sx = 5 + i * 6;
+          for (int b = 0; b < 5; b++) {
+            if ((bits >> (4 - b)) & 1) {
+              line[sx + b] = (idx <= 9) ? (eadk_color_t)0xFFE0 : (eadk_color_t)0x7BEF;
+            } else {
+              line[sx + b] = 0x0000;
+            }
+          }
+          line[sx + 5] = 0x0000;
+        }
+      }
+    }
+
     eadk_display_push_rect((eadk_rect_t){0, scanline, 320, 1}, line);
   } else {
     uint16_t line[NES_SCREEN_WIDTH];
@@ -305,11 +373,22 @@ void ppu_scanline_blit(uint8_t *bmp, int scanline, bool draw_flag) {
       s_current_fps = (int)(s_frame_count * 1000 / (now - s_last_fps_time));
       s_frame_count = 0;
       s_last_fps_time = now;
+      snprintf(s_fps_str, sizeof(s_fps_str), "%d FPS", s_current_fps);
+      s_fps_str_len = strlen(s_fps_str);
+      s_fps_dirty = true;
     }
-    if (s_show_fps) {
-      char buf[12];
-      sprintf(buf, "%d FPS", s_current_fps);
-      eadk_display_draw_string(buf, (eadk_point_t){4, 4}, false, eadk_color_white, eadk_color_black);
+
+    if (s_show_fps && s_scale_mode == VIDEO_SCALE_4_3) {
+      if (s_fps_dirty || s_current_fps != s_displayed_fps) {
+        char num_buf[8];
+        snprintf(num_buf, sizeof(num_buf), "%3d", s_current_fps);
+        eadk_display_draw_string(num_buf, (eadk_point_t){5, 4}, false, (eadk_color_t)0xFFE0, (eadk_color_t)0x18C3);
+        if (s_displayed_fps == -1) {
+          eadk_display_draw_string("FPS", (eadk_point_t){5, 18}, false, (eadk_color_t)0x7BEF, (eadk_color_t)0x18C3);
+        }
+        s_displayed_fps = s_current_fps;
+        s_fps_dirty = false;
+      }
     }
   }
 }
