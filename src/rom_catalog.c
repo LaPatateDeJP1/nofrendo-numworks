@@ -74782,17 +74782,29 @@ static const uint8_t rom_tetris[49168] __attribute__((section(".rodata"), aligne
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-const GameEntry game_catalog[] = {
-  { "2048", rom_2048, sizeof(rom_2048), 0x3BF8CF60U, 0, 16, 0 },
-  { "Final Fantasy", rom_final_fantasy, sizeof(rom_final_fantasy), 0xAE1E2E82U, 1, 256, 0 },
-  { "Metroid", rom_metroid, sizeof(rom_metroid), 0xAC3BDBFEU, 1, 128, 0 },
-  { "Super Mario Bros + Duck Hunt", rom_super_mario_bros___duck_hunt, sizeof(rom_super_mario_bros___duck_hunt), 0xBD60F01BU, 66, 64, 16 },
-  { "Super Mario Bros 2", rom_super_mario_bros_2, sizeof(rom_super_mario_bros_2), 0x71C9D7E9U, 4, 128, 128 },
-  { "Super Mario Bros 3", rom_super_mario_bros_3, sizeof(rom_super_mario_bros_3), 0x8E50F2D8U, 4, 256, 128 },
-  { "Tetris", rom_tetris, sizeof(rom_tetris), 0x5BDF17A1U, 3, 32, 16 },
+__attribute__((section(".rodata"), aligned(4), used))
+const RomCatalogHeader g_rom_catalog = {
+  .magic = 0x5441434E,
+  .count = 7,
+  .entries = {
+    { (const char *)g_rom_catalog.titles[0], rom_2048, sizeof(rom_2048), 0x3BF8CF60U, 0, 0, 16, 0, 0 },
+    { (const char *)g_rom_catalog.titles[1], rom_final_fantasy, sizeof(rom_final_fantasy), 0xAE1E2E82U, 1, 0, 256, 0, 0 },
+    { (const char *)g_rom_catalog.titles[2], rom_metroid, sizeof(rom_metroid), 0xAC3BDBFEU, 1, 0, 128, 0, 0 },
+    { (const char *)g_rom_catalog.titles[3], rom_super_mario_bros___duck_hunt, sizeof(rom_super_mario_bros___duck_hunt), 0xBD60F01BU, 66, 0, 64, 16, 0 },
+    { (const char *)g_rom_catalog.titles[4], rom_super_mario_bros_2, sizeof(rom_super_mario_bros_2), 0x71C9D7E9U, 4, 0, 128, 128, 0 },
+    { (const char *)g_rom_catalog.titles[5], rom_super_mario_bros_3, sizeof(rom_super_mario_bros_3), 0x8E50F2D8U, 4, 0, 256, 128, 0 },
+    { (const char *)g_rom_catalog.titles[6], rom_tetris, sizeof(rom_tetris), 0x5BDF17A1U, 3, 0, 32, 16, 0 },
+  },
+  .titles = {
+    "2048",
+    "Final Fantasy",
+    "Metroid",
+    "Super Mario Bros + Duck Hunt",
+    "Super Mario Bros 2",
+    "Super Mario Bros 3",
+    "Tetris",
+  }
 };
-
-const size_t game_catalog_count = 7;
 
 static const GameEntry *s_current_game = NULL;
 

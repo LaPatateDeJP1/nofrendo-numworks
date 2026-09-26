@@ -216,10 +216,6 @@ const GameEntry *menu_select_game(const GameEntry *games, size_t count) {
     return NULL;
   }
 
-  if (count == 1) {
-    return &games[0];
-  }
-
   size_t selected = 0;
   size_t top_index = 0;
   bool needs_full_redraw = true;

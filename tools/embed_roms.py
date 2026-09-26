@@ -92,13 +92,20 @@ def generate_catalog(input_dir: str, output_c: str, output_h: str):
                     fc.write(f"  {hex_str}\n")
             fc.write("};\n\n")
 
-        fc.write("const GameEntry game_catalog[] = {\n")
+        fc.write("__attribute__((section(\".rodata\"), aligned(4), used))\n")
+        fc.write("const RomCatalogHeader g_rom_catalog = {\n")
+        fc.write("  .magic = 0x5441434E,\n")
+        fc.write(f"  .count = {len(games)},\n")
+        fc.write("  .entries = {\n")
+        for i, g in enumerate(games):
+            fc.write(f'    {{ (const char *)g_rom_catalog.titles[{i}], {g["var_name"]}, sizeof({g["var_name"]}), 0x{g["crc"]:08X}U, {g["mapper"]}, 0, {g["prg_kb"]}, {g["chr_kb"]}, 0 }},\n')
+        fc.write("  },\n")
+        fc.write("  .titles = {\n")
         for g in games:
-            fc.write(f'  {{ "{g["title"]}", {g["var_name"]}, sizeof({g["var_name"]}), 0x{g["crc"]:08X}U, {g["mapper"]}, {g["prg_kb"]}, {g["chr_kb"]} }},\n')
-        if not games:
-            fc.write("  { NULL, NULL, 0, 0, 0, 0, 0 }\n")
+            safe_title = g["title"].replace('"', '\\"')[:31]
+            fc.write(f'    "{safe_title}",\n')
+        fc.write("  }\n")
         fc.write("};\n\n")
-        fc.write(f"const size_t game_catalog_count = {len(games)};\n\n")
 
         fc.write("static const GameEntry *s_current_game = NULL;\n\n")
         fc.write("void game_set_current(const GameEntry *game) {\n")

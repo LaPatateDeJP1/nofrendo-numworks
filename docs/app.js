@@ -396,100 +396,85 @@ function updateCreatorUI() {
 // --------------------------------------------------------------------------
 async function buildCustomBinary() {
   if (!state.cachedTemplateBin) {
-    const res = await fetch("nofrendo_express.bin");
+    const res = await fetch("nofrendo_template.bin");
     if (!res.ok) {
-      throw new Error("Impossible de charger le template de base nofrendo_express.bin");
+      throw new Error("Impossible de charger le template de base nofrendo_template.bin");
     }
     state.cachedTemplateBin = await res.arrayBuffer();
   }
 
-  // 1. Clonage du binaire de base
-  const baseU8 = new Uint8Array(state.cachedTemplateBin);
+  const templateU8 = new Uint8Array(state.cachedTemplateBin);
+  const flashStart = state.usbDevice.flashStart; // 0x90570000
 
-  // 2. Détection de la position du catalogue et de la première ROM dans le binaire de base
-  // Recherche du marqueur 2048 ou de la fin du code émulateur
-  // Dans nofrendo_express.bin, le code moteur se termine vers 0x12268 (74 Ko)
-  // et les données de 2048.nes commencent avec l'en-tête iNES 'N','E','S',0x1A
-  let baseCodeLimit = -1;
-  for (let i = 0x8000; i < baseU8.length - 4; i += 4) {
-    if (baseU8[i] === 0x4E && baseU8[i+1] === 0x45 && baseU8[i+2] === 0x53 && baseU8[i+3] === 0x1A) {
-      baseCodeLimit = i;
+  // 1. Recherche du marqueur 'NCAT' (0x5441434E)
+  let catalogOffset = -1;
+  for (let i = 0; i < templateU8.length - 4; i += 4) {
+    if (templateU8[i] === 0x4E && templateU8[i+1] === 0x43 && templateU8[i+2] === 0x41 && templateU8[i+3] === 0x54) {
+      catalogOffset = i;
       break;
     }
   }
 
-  if (baseCodeLimit === -1) {
-    // Repli de secours : taille fixe du code
-    baseCodeLimit = 74344;
+  if (catalogOffset === -1) {
+    throw new Error("Marqueur de catalogue NCAT non trouvé dans le template binaire.");
   }
 
-  // Taille du code pur sans la ROM par défaut
-  const codeSection = baseU8.subarray(0, baseCodeLimit);
+  const numGames = Math.min(state.romList.length, 32);
+  const baseTemplateSize = templateU8.length;
 
-  // 3. Calcul de la taille totale nécessaire pour les nouvelles ROMs et la table
-  const numGames = state.romList.length;
-  const gameEntrySize = 24; // sizeof(GameEntry) = 24 octets
-  const titleSize = 32;     // 32 octets par titre
-  const catalogSize = numGames * gameEntrySize + numGames * titleSize;
-
+  // Calcul de la taille totale pour les ROMs
   let totalRomsSize = 0;
-  state.romList.forEach(r => {
-    // Alignement de chaque ROM sur 4 octets
-    const alignedSize = (r.size + 3) & ~3;
-    totalRomsSize += alignedSize;
+  state.romList.slice(0, numGames).forEach(r => {
+    totalRomsSize += ((r.size + 3) & ~3); // Alignement 4 octets
   });
 
-  const totalAppSize = codeSection.length + totalRomsSize + catalogSize;
+  const totalAppSize = baseTemplateSize + totalRomsSize;
   const outBuf = new Uint8Array(totalAppSize);
+  // Copier l'intégralité du template (code, mappers, icône, chaîne de caractères intactes)
+  outBuf.set(templateU8, 0);
 
-  // Copie du code de base
-  outBuf.set(codeSection, 0);
-
-  // Écriture séquentielle des ROMs
-  const flashStart = state.usbDevice.flashStart; // ex: 0x90581000
-  let currentRomOffset = codeSection.length;
-  const romPointers = [];
-
-  state.romList.forEach(r => {
-    outBuf.set(r.data, currentRomOffset);
-    romPointers.push(currentRomOffset);
-    currentRomOffset += ((r.size + 3) & ~3);
-  });
-
-  // Écriture des titres et de la table GameEntry
-  let titlesStartOffset = currentRomOffset;
-  const titlePointers = [];
-  const textEncoder = new TextEncoder();
-
-  state.romList.forEach(r => {
-    const encoded = textEncoder.encode(r.title.slice(0, 31));
-    outBuf.set(encoded, titlesStartOffset);
-    outBuf[titlesStartOffset + encoded.length] = 0; // Terminateur
-    titlePointers.push(titlesStartOffset);
-    titlesStartOffset += titleSize;
-  });
-
-  // Écriture de la table GameEntry
-  let tableOffset = titlesStartOffset;
   const dv = new DataView(outBuf.buffer);
 
-  state.romList.forEach((r, idx) => {
-    const entryOffset = tableOffset + idx * gameEntrySize;
-    const titlePtr = flashStart + titlePointers[idx];
-    const romPtr = flashStart + romPointers[idx];
+  // 2. Écriture du count
+  dv.setUint32(catalogOffset + 4, numGames, true);
 
+  const entryBaseOffset = catalogOffset + 8;
+  const titlesBaseOffset = catalogOffset + 8 + 32 * 24; // 776 octets après magic+count
+  const textEncoder = new TextEncoder();
+
+  let currentRomOffset = baseTemplateSize;
+
+  for (let i = 0; i < numGames; i++) {
+    const rom = state.romList[i];
+    const alignedRomSize = ((rom.size + 3) & ~3);
+
+    // Titre dans la table interne
+    const titleOffset = titlesBaseOffset + i * 32;
+    const encodedTitle = textEncoder.encode(rom.title.slice(0, 31));
+    outBuf.set(encodedTitle, titleOffset);
+    outBuf[titleOffset + encodedTitle.length] = 0; // Null terminator
+    const titlePtr = flashStart + titleOffset;
+
+    // Écriture de la ROM à la suite du template
+    outBuf.set(rom.data, currentRomOffset);
+    const romPtr = flashStart + currentRomOffset;
+
+    // GameEntry struct (24 octets)
+    const entryOffset = entryBaseOffset + i * 24;
     dv.setUint32(entryOffset + 0, titlePtr, true);
     dv.setUint32(entryOffset + 4, romPtr, true);
-    dv.setUint32(entryOffset + 8, r.size, true);
-    dv.setUint32(entryOffset + 12, r.crc32, true);
-    dv.setUint8(entryOffset + 16, r.mapper);
-    dv.setUint8(entryOffset + 17, 0); // padding
-    dv.setUint16(entryOffset + 18, r.prgKb, true);
-    dv.setUint16(entryOffset + 20, r.chrKb, true);
-    dv.setUint16(entryOffset + 22, 0, true); // padding
-  });
+    dv.setUint32(entryOffset + 8, rom.size, true);
+    dv.setUint32(entryOffset + 12, rom.crc32, true);
+    dv.setUint8(entryOffset + 16, rom.mapper);
+    dv.setUint8(entryOffset + 17, 0); // pad
+    dv.setUint16(entryOffset + 18, rom.prgKb, true);
+    dv.setUint16(entryOffset + 20, rom.chrKb, true);
+    dv.setUint16(entryOffset + 22, 0, true); // pad2
 
-  // Mise à jour de la taille totale de l'app dans l'en-tête EADK (Offset 0x18 = 24)
+    currentRomOffset += alignedRomSize;
+  }
+
+  // 3. Mise à jour de la taille totale de l'app dans l'en-tête EADK (Offset 0x18 = 24)
   dv.setUint32(24, totalAppSize, true);
 
   return outBuf;
