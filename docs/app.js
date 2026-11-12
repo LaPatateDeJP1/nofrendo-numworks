@@ -4,12 +4,22 @@
  * calcul CRC32 STM32, assemblage binaire et pilotage WebUSB.
  */
 
-import { NumWorksDevice } from "./webusb.js";
+import { NumWorksDevice } from "./webusb.js?v=2";
+import { linkNwaWithRoms } from "./nwa_linker.js?v=2";
 
-// Limite allouée pour la mémoire Flash externe dédiée aux ROMs (2 Mo)
-const FLASH_MAX_BYTES = 2 * 1024 * 1024;
+// Limite par défaut allouée aux applications externes (2 Mo, mise à jour dynamiquement à la connexion)
+const FLASH_DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 // Poids estimé du moteur émulateur sans ROMs
 const EMULATOR_BASE_BYTES = 82 * 1024;
+
+const DEFAULT_MEMORY_MAP = {
+  flashStart: 0x90570000,
+  flashEnd: 0x90770000,
+  flashLength: FLASH_DEFAULT_MAX_BYTES,
+  ramStart: 0x24012804,
+  ramLength: 0x2D7FC,
+  trampolineStart: 0x90420038
+};
 
 // Calculateur de CRC32 compatible STM32 / Ethernet (Polynôme 0x04C11DB7)
 function calculateCrc32(uint8Array) {
@@ -43,7 +53,9 @@ function formatRomTitle(filename) {
 const state = {
   usbDevice: new NumWorksDevice(),
   romList: [], // Liste des ROMs ajoutées : { file, name, size, data, mapper, prgKb, chrKb, crc32 }
-  cachedTemplateBin: null
+  flashMaxBytes: FLASH_DEFAULT_MAX_BYTES,
+  cachedNwa: null,
+  cachedCrt0: null
 };
 
 // Initialisation au chargement du DOM
@@ -110,15 +122,26 @@ function initExpressView() {
     try {
       const info = await state.usbDevice.connect();
       updateUsbBadge(true, info.model);
-      logConsole(consoleBox, `Calculatrice détectée : ${info.productName} (${info.productId})`, "success");
-      logConsole(consoleBox, "Chargement du binaire Express précompilé (2048.nes)...", "info");
+      logConsole(consoleBox, `Calculatrice détectée : ${info.productName} (${info.productId}) — ${info.model}`, "success");
 
-      const response = await fetch("nofrendo_express.bin");
-      if (!response.ok) {
-        throw new Error(`Impossible de récupérer nofrendo_express.bin (HTTP ${response.status})`);
+      if (info.memoryMap) {
+        state.flashMaxBytes = info.memoryMap.flashLength;
+        updateCreatorUI();
+        logMemoryMap(consoleBox, info.memoryMap);
+      } else {
+        logConsole(consoleBox, "Carte mémoire non détectée via DFU UPLOAD : utilisation des adresses par défaut (Slot B).", "info");
       }
-      const binData = await response.arrayBuffer();
-      logConsole(consoleBox, `Binaire chargé (${Math.round(binData.byteLength / 1024)} Ko). Début du transfert...`, "info");
+
+      logConsole(consoleBox, "Téléchargement du moteur Nofrendo (.nwa) et de la ROM 2048.nes...", "info");
+      const romRes = await fetch("2048.nes");
+      if (!romRes.ok) {
+        throw new Error(`Impossible de récupérer 2048.nes (HTTP ${romRes.status})`);
+      }
+      const romU8 = new Uint8Array(await romRes.arrayBuffer());
+      const expressRom = parseInesRom(romU8, "2048.nes", "2048");
+
+      const binData = await buildCustomBinary(getTargetMemoryMap(), [expressRom]);
+      logConsole(consoleBox, `Binaire lié avec succès (${Math.round(binData.byteLength / 1024)} Ko). Début du transfert...`, "info");
 
       await state.usbDevice.installAppBinary(binData, (p) => {
         if (progressBar) {
@@ -215,6 +238,48 @@ function initDropzone() {
   });
 }
 
+// Extraction et validation d'une ROM iNES
+function parseInesRom(u8, filename, overrideTitle = null) {
+  if (u8.length < 16 || u8[0] !== 0x4E || u8[1] !== 0x45 || u8[2] !== 0x53 || u8[3] !== 0x1A) {
+    throw new Error(`Le fichier "${filename}" n'a pas d'en-tête iNES valide (NES\\x1A).`);
+  }
+
+  const prgRom16Kb = u8[4];
+  const chrRom8Kb = u8[5];
+  const flags6 = u8[6];
+  const flags7 = u8[7];
+  const mapper = (flags6 >> 4) | (flags7 & 0xF0);
+
+  return {
+    id: "rom_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+    filename,
+    title: overrideTitle || formatRomTitle(filename),
+    size: u8.length,
+    mapper,
+    prgKb: prgRom16Kb * 16,
+    chrKb: chrRom8Kb * 8,
+    crc32: calculateCrc32(u8),
+    data: u8
+  };
+}
+
+function getTargetMemoryMap() {
+  return state.usbDevice.memoryMap || DEFAULT_MEMORY_MAP;
+}
+
+function logMemoryMap(consoleBox, memMap) {
+  const fStart = "0x" + memMap.flashStart.toString(16).toUpperCase();
+  const fEnd = "0x" + memMap.flashEnd.toString(16).toUpperCase();
+  const rStart = "0x" + memMap.ramStart.toString(16).toUpperCase();
+  const tStart = "0x" + memMap.trampolineStart.toString(16).toUpperCase();
+  const availMb = (memMap.flashLength / (1024 * 1024)).toFixed(2);
+  logConsole(
+    consoleBox,
+    `Carte mémoire lue : Flash ${fStart}..${fEnd} (${availMb} Mo) | RAM ${rStart} | Trampoline ${tStart}`,
+    "cmd"
+  );
+}
+
 // Analyse et validation de chaque fichier ajouté
 async function handleFiles(files) {
   if (!files || files.length === 0) return;
@@ -228,36 +293,9 @@ async function handleFiles(files) {
     try {
       const buffer = await file.arrayBuffer();
       const u8 = new Uint8Array(buffer);
-
-      // Validation stricte de l'en-tête iNES : 'N' 'E' 'S' 0x1A
-      if (u8.length < 16 || u8[0] !== 0x4E || u8[1] !== 0x45 || u8[2] !== 0x53 || u8[3] !== 0x1A) {
-        alert(`Le fichier "${file.name}" n'a pas d'en-tête iNES valide (NES\\x1A).`);
-        continue;
-      }
-
-      const prgRom16Kb = u8[4];
-      const chrRom8Kb = u8[5];
-      const flags6 = u8[6];
-      const flags7 = u8[7];
-      const mapper = (flags6 >> 4) | (flags7 & 0xF0);
-
-      const prgKb = prgRom16Kb * 16;
-      const chrKb = chrRom8Kb * 8;
-      const crc32 = calculateCrc32(u8);
-
-      state.romList.push({
-        id: "rom_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-        filename: file.name,
-        title: formatRomTitle(file.name),
-        size: u8.length,
-        mapper: mapper,
-        prgKb: prgKb,
-        chrKb: chrKb,
-        crc32: crc32,
-        data: u8
-      });
+      state.romList.push(parseInesRom(u8, file.name));
     } catch (err) {
-      alert(`Erreur lors de la lecture de "${file.name}": ` + err.message);
+      alert(err.message);
     }
   }
 
@@ -364,13 +402,14 @@ function updateCreatorUI() {
   }
 
   // Mise à jour de la jauge
+  const maxBytes = state.flashMaxBytes || FLASH_DEFAULT_MAX_BYTES;
   const usedMb = (totalBytes / (1024 * 1024)).toFixed(2);
-  const maxMb = (FLASH_MAX_BYTES / (1024 * 1024)).toFixed(1);
-  const percentage = Math.min(100, Math.round((totalBytes / FLASH_MAX_BYTES) * 100));
+  const maxMb = (maxBytes / (1024 * 1024)).toFixed(2);
+  const percentage = Math.min(100, Math.round((totalBytes / maxBytes) * 100));
 
   if (gaugeFill) {
     gaugeFill.style.width = `${percentage}%`;
-    if (totalBytes > FLASH_MAX_BYTES) {
+    if (totalBytes > maxBytes) {
       gaugeFill.classList.add("warning");
     } else {
       gaugeFill.classList.remove("warning");
@@ -379,7 +418,7 @@ function updateCreatorUI() {
 
   if (gaugeText) {
     gaugeText.textContent = `${usedMb.replace(".", ",")} Mo / ${maxMb.replace(".", ",")} Mo alloués (${percentage}%)`;
-    if (totalBytes > FLASH_MAX_BYTES) {
+    if (totalBytes > maxBytes) {
       gaugeText.style.color = "var(--status-red)";
     } else {
       gaugeText.style.color = "var(--text-muted)";
@@ -387,97 +426,34 @@ function updateCreatorUI() {
   }
 
   if (flashBtn) {
-    flashBtn.disabled = (state.romList.length === 0 || totalBytes > FLASH_MAX_BYTES);
+    flashBtn.disabled = (state.romList.length === 0 || totalBytes > maxBytes);
   }
 }
 
 // --------------------------------------------------------------------------
-// Assemblage du binaire Nofrendo personnalisé (Client-side)
+// Assemblage et édition de liens dynamique (.nwa -> .bin adapté à la NumWorks)
 // --------------------------------------------------------------------------
-async function buildCustomBinary() {
-  if (!state.cachedTemplateBin) {
-    const res = await fetch("nofrendo_template.bin");
+async function loadLinkerAssets() {
+  if (!state.cachedNwa) {
+    const res = await fetch("nofrendo.nwa");
     if (!res.ok) {
-      throw new Error("Impossible de charger le template de base nofrendo_template.bin");
+      throw new Error(`Impossible de charger nofrendo.nwa (HTTP ${res.status})`);
     }
-    state.cachedTemplateBin = await res.arrayBuffer();
+    state.cachedNwa = await res.arrayBuffer();
   }
-
-  const templateU8 = new Uint8Array(state.cachedTemplateBin);
-  const flashStart = state.usbDevice.flashStart; // 0x90570000
-
-  // 1. Recherche du marqueur 'NCAT' (0x5441434E)
-  let catalogOffset = -1;
-  for (let i = 0; i < templateU8.length - 4; i += 4) {
-    if (templateU8[i] === 0x4E && templateU8[i+1] === 0x43 && templateU8[i+2] === 0x41 && templateU8[i+3] === 0x54) {
-      catalogOffset = i;
-      break;
+  if (!state.cachedCrt0) {
+    const res = await fetch("web_crt0.o");
+    if (!res.ok) {
+      throw new Error(`Impossible de charger web_crt0.o (HTTP ${res.status})`);
     }
+    state.cachedCrt0 = await res.arrayBuffer();
   }
+  return { nwaBuf: state.cachedNwa, crt0Buf: state.cachedCrt0 };
+}
 
-  if (catalogOffset === -1) {
-    throw new Error("Marqueur de catalogue NCAT non trouvé dans le template binaire.");
-  }
-
-  const numGames = Math.min(state.romList.length, 32);
-  const baseTemplateSize = templateU8.length;
-
-  // Calcul de la taille totale pour les ROMs
-  let totalRomsSize = 0;
-  state.romList.slice(0, numGames).forEach(r => {
-    totalRomsSize += ((r.size + 3) & ~3); // Alignement 4 octets
-  });
-
-  const totalAppSize = baseTemplateSize + totalRomsSize;
-  const outBuf = new Uint8Array(totalAppSize);
-  // Copier l'intégralité du template (code, mappers, icône, chaîne de caractères intactes)
-  outBuf.set(templateU8, 0);
-
-  const dv = new DataView(outBuf.buffer);
-
-  // 2. Écriture du count
-  dv.setUint32(catalogOffset + 4, numGames, true);
-
-  const entryBaseOffset = catalogOffset + 8;
-  const titlesBaseOffset = catalogOffset + 8 + 32 * 24; // 776 octets après magic+count
-  const textEncoder = new TextEncoder();
-
-  let currentRomOffset = baseTemplateSize;
-
-  for (let i = 0; i < numGames; i++) {
-    const rom = state.romList[i];
-    const alignedRomSize = ((rom.size + 3) & ~3);
-
-    // Titre dans la table interne
-    const titleOffset = titlesBaseOffset + i * 32;
-    const encodedTitle = textEncoder.encode(rom.title.slice(0, 31));
-    outBuf.set(encodedTitle, titleOffset);
-    outBuf[titleOffset + encodedTitle.length] = 0; // Null terminator
-    const titlePtr = flashStart + titleOffset;
-
-    // Écriture de la ROM à la suite du template
-    outBuf.set(rom.data, currentRomOffset);
-    const romPtr = flashStart + currentRomOffset;
-
-    // GameEntry struct (24 octets)
-    const entryOffset = entryBaseOffset + i * 24;
-    dv.setUint32(entryOffset + 0, titlePtr, true);
-    dv.setUint32(entryOffset + 4, romPtr, true);
-    dv.setUint32(entryOffset + 8, rom.size, true);
-    dv.setUint32(entryOffset + 12, rom.crc32, true);
-    dv.setUint8(entryOffset + 16, rom.mapper);
-    dv.setUint8(entryOffset + 17, 0); // pad
-    dv.setUint16(entryOffset + 18, rom.prgKb, true);
-    dv.setUint16(entryOffset + 20, rom.chrKb, true);
-    dv.setUint16(entryOffset + 22, 0, true); // pad2
-
-    currentRomOffset += alignedRomSize;
-  }
-
-  // 3. Mise à jour de la taille totale de l'app dans l'en-tête EADK (Offset 0x18 = 24)
-  dv.setUint32(24, totalAppSize, true);
-
-  return outBuf;
+async function buildCustomBinary(memMap = getTargetMemoryMap(), roms = state.romList) {
+  const { nwaBuf, crt0Buf } = await loadLinkerAssets();
+  return linkNwaWithRoms(nwaBuf, crt0Buf, memMap, roms);
 }
 
 // Flashing du pack personnalisé vers la calculatrice
@@ -486,18 +462,27 @@ async function flashCustomPack() {
   const consoleBox = document.getElementById("creator-console");
   const progressBar = document.getElementById("creator-progress");
 
-  logConsole(consoleBox, "Génération du binaire personnalisé...", "info");
+  logConsole(consoleBox, "Connexion à la calculatrice et lecture de la carte mémoire...", "info");
   flashBtn.disabled = true;
   updateUsbBadge(false, "Connexion...");
 
   try {
     const info = await state.usbDevice.connect();
     updateUsbBadge(true, info.model);
-    logConsole(consoleBox, `Calculatrice détectée : ${info.productName} (${info.productId})`, "success");
+    logConsole(consoleBox, `Calculatrice détectée : ${info.productName} (${info.productId}) — ${info.model}`, "success");
 
-    logConsole(consoleBox, "Assemblage des ROMs et de la table d'indexation...", "info");
-    const customBin = await buildCustomBinary();
-    logConsole(consoleBox, `Pack assemblé avec succès (${Math.round(customBin.byteLength / 1024)} Ko, ${state.romList.length} jeux).`, "success");
+    if (info.memoryMap) {
+      state.flashMaxBytes = info.memoryMap.flashLength;
+      updateCreatorUI();
+      logMemoryMap(consoleBox, info.memoryMap);
+    } else {
+      logConsole(consoleBox, "Carte mémoire non détectée via DFU UPLOAD : utilisation des adresses par défaut (Slot B).", "info");
+    }
+
+    const memMap = getTargetMemoryMap();
+    logConsole(consoleBox, "Édition de liens dynamique de Nofrendo (.nwa) et intégration des ROMs...", "info");
+    const customBin = await buildCustomBinary(memMap, state.romList);
+    logConsole(consoleBox, `Pack lié avec succès (${Math.round(customBin.byteLength / 1024)} Ko, ${state.romList.length} jeux).`, "success");
 
     await state.usbDevice.installAppBinary(customBin, (p) => {
       if (progressBar) {
@@ -518,7 +503,7 @@ async function flashCustomPack() {
     logConsole(consoleBox, `Erreur : ${err.message}`, "error");
     updateUsbBadge(false, "Déconnecté");
   } finally {
-    flashBtn.disabled = false;
+    updateCreatorUI();
   }
 }
 
